@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, Settings, Bell, Heart, Edit3 } from 'lucide-react';
+import { User, LogOut, Settings, Bell, Heart, Edit3, X, Save } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
+import { Input } from '../components/ui/Input';
 
 export function Profile() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<any>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     userService.getUser().then(data => setUser(data));
@@ -18,6 +22,39 @@ export function Profile() {
     authService.logout();
     navigate('/login');
   };
+
+  const handleEditClick = () => {
+    setEditData({
+      name: user.name || '',
+      age: user.age || '',
+      city: user.city || '',
+      locality: user.locality || user.area || '',
+      interests: (user.interests || (user.hobbies ? user.hobbies.map((h: any) => h.name || h) : [])).join(', '),
+      bio: user.bio || ''
+    });
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const interestsArray = (editData.interests || '').split(',').map((i: string) => i.trim()).filter(Boolean);
+    try {
+      const updated = await userService.updateUser({
+        name: editData.name,
+        age: parseInt(editData.age) || undefined,
+        city: editData.city,
+        locality: editData.locality,
+        interests: interestsArray,
+        bio: editData.bio
+      });
+      setUser(updated);
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const displayInterests = user?.interests || (user?.hobbies ? user.hobbies.map((h: any) => h.name || h) : []);
 
   if (!user) {
     return (
@@ -40,7 +77,7 @@ export function Profile() {
         <div className="flex-1 text-center md:text-left flex flex-col gap-2 w-full">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <h1 className="text-4xl font-extrabold text-gray-900">{user.name}</h1>
-            <Button variant="outline" className="border-gray-200">
+            <Button variant="outline" className="border-gray-200" onClick={handleEditClick}>
               <Edit3 className="w-5 h-5 mr-2" /> Edit Profile
             </Button>
           </div>
@@ -55,12 +92,12 @@ export function Profile() {
             My Interests
           </h2>
           <div className="flex flex-wrap gap-3">
-            {(user.interests || []).map((interest: string) => (
+            {displayInterests.map((interest: string) => (
               <span key={interest} className="px-4 py-2 bg-brand-50 text-brand-800 rounded-xl font-medium text-lg border border-brand-200">
                 {interest}
               </span>
             ))}
-            {(!user.interests || user.interests.length === 0) && (
+            {displayInterests.length === 0 && (
               <p className="text-gray-500 text-lg">No interests added yet.</p>
             )}
           </div>
@@ -87,6 +124,59 @@ export function Profile() {
           <LogOut className="w-6 h-6 mr-2" /> Log Out
         </Button>
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 flex flex-col gap-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Edit Profile</h2>
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <Input value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                <Input type="number" value={editData.age} onChange={e => setEditData({...editData, age: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <Input value={editData.city} onChange={e => setEditData({...editData, city: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Locality / Area</label>
+                <Input value={editData.locality} onChange={e => setEditData({...editData, locality: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Interests (comma separated)</label>
+                <Input value={editData.interests} onChange={e => setEditData({...editData, interests: e.target.value})} placeholder="Reading, Gardening, Walking" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                <textarea 
+                  value={editData.bio} 
+                  onChange={e => setEditData({...editData, bio: e.target.value})}
+                  className="flex w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent min-h-[100px]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving ? 'Saving...' : <><Save className="w-5 h-5 mr-2" /> Save Changes</>}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
     </div>
   );
 }

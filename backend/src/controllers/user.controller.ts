@@ -165,3 +165,56 @@ export const getUserProfile = async (req: Request | any, res: Response): Promise
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+
+export const updateUserProfile = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const { name, age, city, locality, bio, interests } = req.body;
+    
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (age !== undefined) updateData.age = age;
+    if (city !== undefined) updateData.city = city;
+    if (locality !== undefined) updateData.locality = locality;
+    if (bio !== undefined) updateData.bio = bio;
+    
+    if (interests && Array.isArray(interests)) {
+      const hobbyIds = [];
+      for (const interest of interests) {
+        const trimmed = interest.trim();
+        if (!trimmed) continue;
+        let hobby = await prisma.hobby.findUnique({ where: { name: trimmed } });
+        if (!hobby) {
+          hobby = await prisma.hobby.create({ data: { name: trimmed } });
+        }
+        hobbyIds.push(hobby.id);
+      }
+      updateData.hobbyIds = { set: hobbyIds };
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        age: true,
+        city: true,
+        locality: true,
+        bio: true,
+        avatar: true,
+        hobbies: { select: { name: true } }
+      }
+    });
+
+    res.json({ success: true, user: updatedUser });
+  } catch (error: any) {
+    console.error('Update User Profile Error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
