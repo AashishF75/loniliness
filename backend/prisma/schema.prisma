@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SENIOR
+  FAMILY
+  VOLUNTEER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  phone         String?
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(SENIOR)
+  avatar        String?
+  age           Int?
+  city          String?
+  locality      String?
+  languages     String[]
+  bio           String?
+  verified      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Many-to-many Hobbies (MongoDB style)
+  hobbyIds      String[]  @db.ObjectId
+  hobbies       Hobby[]   @relation(fields: [hobbyIds], references: [id])
+
+  // Many-to-many Activities (MongoDB style)
+  activityIds   String[]  @db.ObjectId
+  activities    Activity[] @relation(fields: [activityIds], references: [id])
+
+  // Connections
+  connections   Connection[] @relation("UserConnections")
+  connectedTo   Connection[] @relation("ConnectedUsers")
+
+  reminders     Reminder[]
+  emergencies   EmergencyAlert[]
+}
+
+model Hobby {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  userIds   String[] @db.ObjectId
+  users     User[]   @relation(fields: [userIds], references: [id])
+}
+
+model Connection {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation("UserConnections", fields: [userId], references: [id])
+  connectedId String   @db.ObjectId
+  connected   User     @relation("ConnectedUsers", fields: [connectedId], references: [id])
+  status      String   @default("PENDING") // PENDING, ACCEPTED, BLOCKED
+  createdAt   DateTime @default(now())
+}
+
+model Activity {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  category    String
+  description String
+  location    String
+  latitude    Float?
+  longitude   Float?
+  startTime   DateTime
+  image       String?
+  organizerId String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  
+  participantIds String[] @db.ObjectId
+  participants   User[]   @relation(fields: [participantIds], references: [id])
+}
+
+model Reminder {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  type        String   // MEDICINE, EVENT, WATER
+  time        DateTime
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model EmergencyAlert {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  latitude    Float?
+  longitude   Float?
+  status      String   @default("ACTIVE") // ACTIVE, RESOLVED
+  createdAt   DateTime @default(now())
+}
