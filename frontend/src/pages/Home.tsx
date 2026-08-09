@@ -1,169 +1,174 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Users, Calendar, ShieldCheck, MapPin, Sparkles, UserPlus, MessageCircle } from 'lucide-react';
+import { Heart, Users, Calendar, ShieldCheck, MapPin, Sparkles, UserPlus, MessageCircle, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { motion, type Variants } from 'framer-motion';
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.7 } }
+};
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.2 }
+  }
+};
 
 export function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 -m-4 md:-m-6 lg:-m-8">
-      {/* Navbar / Header for landing page */}
-      <header className="bg-white py-4 px-6 md:px-8 flex justify-between items-center border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-brand-600 text-white rounded-xl flex items-center justify-center font-bold text-2xl shadow-sm">
+    <div className="flex flex-col min-h-screen bg-slate-50 font-sans text-slate-900 -m-4 md:-m-6 lg:-m-8">
+      {/* HEADER */}
+      <header className="bg-white/90 backdrop-blur-md sticky top-0 z-50 py-3 md:py-4 px-4 sm:px-6 md:px-12 flex justify-between items-center border-b border-slate-200/60 shadow-sm">
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="w-10 h-10 md:w-14 md:h-14 bg-brand-600 text-white rounded-xl md:rounded-2xl flex items-center justify-center font-bold text-xl md:text-3xl shadow-md shadow-brand-600/20">
             S
           </div>
-          <span className="text-2xl font-extrabold text-brand-700 tracking-tight">Saathi</span>
+          <span className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">Saathi</span>
         </div>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/login')}>Login</Button>
+        <div className="flex items-center gap-2 md:gap-4">
+          <Button variant="ghost" className="text-base sm:text-lg md:text-xl font-semibold text-slate-700 hover:text-brand-700 hover:bg-brand-50 px-4 py-2 md:px-6 md:py-3 h-auto" onClick={() => navigate('/login')}>
+            Login
+          </Button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center">
-        {/* 1. Hero Section */}
-        <section className="w-full px-6 py-16 md:py-24 max-w-4xl mx-auto flex flex-col items-center text-center gap-8">
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-100 text-brand-800 rounded-full text-base font-semibold mb-2">
-            <Heart className="w-5 h-5 fill-brand-800" />
-            Designed exclusively for senior citizens
-          </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight">
-            No Elder Should <br className="hidden md:block" />
-            <span className="text-brand-600">Feel Alone.</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-600 max-w-2xl leading-relaxed">
-            AI-powered hyperlocal companionship for senior citizens. Find friends nearby, join meaningful activities, and stay connected safely.
-          </p>
-          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4 mt-6">
-            <Button size="lg" className="text-xl w-full sm:w-auto shadow-lg" onClick={() => navigate('/onboarding')}>
-              Get Started
-            </Button>
-            <Button variant="outline" size="lg" className="text-xl w-full sm:w-auto bg-white" onClick={() => navigate('/family')}>
-              I'm a Family Member
-            </Button>
-          </div>
+      <main className="flex-1 flex flex-col w-full items-center overflow-hidden">
+        {/* HERO SECTION */}
+        <section className="w-full px-4 sm:px-6 py-12 sm:py-20 md:py-24 lg:py-32 max-w-[1440px] mx-auto flex flex-col items-center text-center gap-6 md:gap-8 relative">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[600px] h-[600px] bg-brand-400/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+          
+          <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="flex flex-col items-center gap-6 md:gap-8 w-full max-w-5xl">
+            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 bg-brand-50 text-brand-800 rounded-full text-sm sm:text-base md:text-lg font-semibold border border-brand-100 shadow-sm max-w-full text-left sm:text-center leading-snug">
+              <Heart className="w-5 h-5 sm:w-6 sm:h-6 fill-brand-600 text-brand-600 shrink-0" />
+              <span>Designed exclusively for senior citizens</span>
+            </motion.div>
+            
+            <motion.h1 variants={fadeUp} className="font-extrabold text-slate-900 leading-[1.15] tracking-tight w-full" style={{ fontSize: 'clamp(2.5rem, 6vw + 1rem, 5rem)' }}>
+              No Elder Should <br className="hidden sm:block" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-teal-600">Feel Alone.</span>
+            </motion.h1>
+            
+            <motion.p variants={fadeUp} className="text-lg sm:text-xl md:text-2xl text-slate-600 max-w-3xl leading-relaxed font-medium px-2">
+              AI-powered hyperlocal companionship for senior citizens. Find friends nearby, join meaningful activities, and stay connected safely.
+            </motion.p>
+            
+            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row w-full sm:w-auto gap-4 sm:gap-5 mt-6 md:mt-8 px-4 sm:px-0">
+              <Button className="text-lg sm:text-xl md:text-2xl px-6 sm:px-8 md:px-12 py-5 sm:py-6 md:py-8 shadow-xl shadow-brand-600/20 rounded-2xl w-full sm:w-auto transition-transform hover:scale-[1.02] active:scale-[0.98] h-auto" onClick={() => navigate('/onboarding')}>
+                Get Started <ArrowRight className="ml-2 sm:ml-3 w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
+              </Button>
+              <Button variant="outline" className="text-lg sm:text-xl md:text-2xl px-6 sm:px-8 md:px-12 py-5 sm:py-6 md:py-8 shadow-sm rounded-2xl w-full sm:w-auto border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-transform hover:scale-[1.02] active:scale-[0.98] h-auto" onClick={() => navigate('/family')}>
+                I'm a Family Member
+              </Button>
+            </motion.div>
+          </motion.div>
         </section>
 
-        {/* 2. How Saathi Helps */}
-        <section className="w-full bg-white py-16 md:py-24 border-y border-gray-100">
-          <div className="max-w-5xl mx-auto px-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">How Saathi Helps</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <Card className="flex flex-col items-center text-center p-8 border-brand-100 bg-brand-50/50">
-                <div className="w-20 h-20 bg-brand-100 text-brand-600 rounded-2xl flex items-center justify-center mb-6">
-                  <Users className="w-10 h-10" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Find Nearby People</h3>
-                <p className="text-gray-600 text-lg leading-relaxed">Connect with other seniors in your neighborhood who share your unique interests.</p>
-              </Card>
-              <Card className="flex flex-col items-center text-center p-8 border-brand-100 bg-brand-50/50">
-                <div className="w-20 h-20 bg-brand-100 text-brand-600 rounded-2xl flex items-center justify-center mb-6">
-                  <Calendar className="w-10 h-10" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Discover Activities</h3>
-                <p className="text-gray-600 text-lg leading-relaxed">Join local yoga sessions, book clubs, park walks, and other engaging community events.</p>
-              </Card>
-              <Card className="flex flex-col items-center text-center p-8 border-brand-100 bg-brand-50/50">
-                <div className="w-20 h-20 bg-brand-100 text-brand-600 rounded-2xl flex items-center justify-center mb-6">
-                  <Sparkles className="w-10 h-10" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">AI Recommendations</h3>
-                <p className="text-gray-600 text-lg leading-relaxed">Our smart Saathi AI suggests friends and activities perfectly matched to your lifestyle.</p>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. Simple 3-step explanation */}
-        <section className="w-full py-16 md:py-24 bg-slate-50">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-16">How It Works</h2>
-            <div className="flex flex-col md:flex-row justify-between items-center gap-12 relative">
-              <div className="hidden md:block absolute top-10 left-16 right-16 h-1 bg-brand-200 -z-10 rounded-full"></div>
+        {/* HOW SAATHI HELPS */}
+        <section className="w-full bg-white py-16 sm:py-24 md:py-32 border-y border-slate-200">
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer} className="flex flex-col items-center max-w-7xl mx-auto">
+              <motion.h2 variants={fadeUp} className="font-bold text-center text-slate-900 mb-12 sm:mb-16 tracking-tight" style={{ fontSize: 'clamp(2rem, 4vw + 1rem, 3rem)' }}>
+                How Saathi Helps
+              </motion.h2>
               
-              <div className="flex flex-col items-center bg-slate-50 px-6">
-                <div className="w-20 h-20 bg-white border-[6px] border-brand-500 text-brand-600 rounded-full flex items-center justify-center shadow-md mb-6">
-                  <MapPin className="w-8 h-8" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">1. Discover</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 w-full">
+                {[
+                  { icon: Users, title: "Find Nearby People", desc: "Connect with other seniors in your neighborhood who share your unique interests." },
+                  { icon: Calendar, title: "Discover Activities", desc: "Join local yoga sessions, book clubs, park walks, and other engaging community events." },
+                  { icon: Sparkles, title: "AI Recommendations", desc: "Our smart Saathi AI suggests friends and activities perfectly matched to your lifestyle." }
+                ].map((feature, idx) => (
+                  <motion.div key={idx} variants={fadeUp} className="flex h-full">
+                    <Card className="flex flex-col items-center text-center p-8 sm:p-10 lg:p-12 w-full h-full border-slate-100 bg-slate-50/50 rounded-3xl sm:rounded-[32px] transition-all duration-300 hover:shadow-2xl hover:shadow-brand-900/5 hover:-translate-y-2 group cursor-default">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-brand-100 text-brand-600 rounded-2xl sm:rounded-3xl flex items-center justify-center mb-6 sm:mb-8 transition-transform duration-300 group-hover:scale-110 group-hover:bg-brand-600 group-hover:text-white shadow-inner shrink-0">
+                        <feature.icon className="w-10 h-10 sm:w-12 sm:h-12" />
+                      </div>
+                      <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 sm:mb-5">{feature.title}</h3>
+                      <p className="text-slate-600 text-lg sm:text-xl leading-relaxed">{feature.desc}</p>
+                    </Card>
+                  </motion.div>
+                ))}
               </div>
-              
-              <div className="flex flex-col items-center bg-slate-50 px-6">
-                <div className="w-20 h-20 bg-white border-[6px] border-brand-500 text-brand-600 rounded-full flex items-center justify-center shadow-md mb-6">
-                  <MessageCircle className="w-8 h-8" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">2. Connect</h3>
-              </div>
-
-              <div className="flex flex-col items-center bg-slate-50 px-6">
-                <div className="w-20 h-20 bg-white border-[6px] border-brand-500 text-brand-600 rounded-full flex items-center justify-center shadow-md mb-6">
-                  <UserPlus className="w-8 h-8" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">3. Participate</h3>
-              </div>
-            </div>
+            </motion.div>
           </div>
         </section>
 
-        {/* 3. Why Saathi */}
-        <section className="w-full bg-brand-900 text-white py-16 md:py-24">
-          <div className="max-w-5xl mx-auto px-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Why Choose Saathi?</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-              <div className="flex items-start gap-6 p-6 rounded-3xl bg-brand-800/80 border border-brand-700">
-                <div className="p-4 bg-brand-700 rounded-2xl shrink-0">
-                  <Heart className="w-8 h-8 text-brand-100" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold mb-2">Elder-Friendly</h3>
-                  <p className="text-brand-50 text-lg leading-relaxed">Large fonts, simple navigation, and clear instructions designed for ease of use.</p>
-                </div>
+        {/* HOW IT WORKS */}
+        <section className="w-full py-16 sm:py-24 md:py-32 bg-slate-50">
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer} className="max-w-6xl mx-auto">
+              <motion.h2 variants={fadeUp} className="font-bold text-slate-900 mb-16 sm:mb-20 tracking-tight" style={{ fontSize: 'clamp(2rem, 4vw + 1rem, 3rem)' }}>
+                How It Works
+              </motion.h2>
+              
+              <div className="flex flex-col md:flex-row justify-between items-start gap-12 sm:gap-16 relative">
+                {/* Connecting Line for Desktop */}
+                <div className="hidden md:block absolute top-[52px] lg:top-[60px] left-[15%] right-[15%] h-2 bg-slate-200 -z-10 rounded-full"></div>
+                
+                {[
+                  { icon: MapPin, title: "1. Discover", desc: "Find safe activities and verified peers nearby." },
+                  { icon: MessageCircle, title: "2. Connect", desc: "Chat online securely before meeting in person." },
+                  { icon: UserPlus, title: "3. Participate", desc: "Join events and build real, lasting friendships." }
+                ].map((step, idx) => (
+                  <motion.div key={idx} variants={fadeUp} className="flex flex-col items-center w-full md:w-1/3 px-2 sm:px-4 relative z-10">
+                    <div className="w-24 h-24 lg:w-32 lg:h-32 bg-white border-[8px] lg:border-[10px] border-slate-50 ring-4 ring-brand-200 text-brand-600 rounded-full flex items-center justify-center shadow-xl shadow-brand-900/5 mb-6 lg:mb-8 shrink-0">
+                      <step.icon className="w-10 h-10 lg:w-14 lg:h-14" />
+                    </div>
+                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 sm:mb-4">{step.title}</h3>
+                    <p className="text-slate-600 text-lg sm:text-xl leading-relaxed max-w-[280px] md:max-w-full">{step.desc}</p>
+                  </motion.div>
+                ))}
               </div>
-              <div className="flex items-start gap-6 p-6 rounded-3xl bg-brand-800/80 border border-brand-700">
-                <div className="p-4 bg-brand-700 rounded-2xl shrink-0">
-                  <MapPin className="w-8 h-8 text-brand-100" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold mb-2">Hyperlocal</h3>
-                  <p className="text-brand-50 text-lg leading-relaxed">Focus on people and activities safely within your walking distance or neighborhood.</p>
-                </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* WHY SAATHI */}
+        <section className="w-full bg-slate-900 text-white py-16 sm:py-24 md:py-32">
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer} className="max-w-6xl mx-auto">
+              <motion.h2 variants={fadeUp} className="font-bold text-center mb-12 sm:mb-16 tracking-tight text-white" style={{ fontSize: 'clamp(2rem, 4vw + 1rem, 3rem)' }}>
+                Why Choose Saathi?
+              </motion.h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 w-full">
+                {[
+                  { icon: Heart, title: "Elder-Friendly", desc: "Large fonts, simple navigation, and clear instructions designed specifically for ease of use." },
+                  { icon: MapPin, title: "Hyperlocal", desc: "Focus on people and activities safely within your comfortable walking distance or neighborhood." },
+                  { icon: ShieldCheck, title: "Safe Community", desc: "Verified profiles, family updates, and built-in SOS features keep you safe and secure at all times." },
+                  { icon: Users, title: "Meaningful Connection", desc: "Move easily from online discovery to real-life, offline participation seamlessly." }
+                ].map((perk, idx) => (
+                  <motion.div key={idx} variants={fadeUp} className="flex flex-col sm:flex-row items-start gap-6 sm:gap-8 p-6 sm:p-8 lg:p-10 rounded-3xl sm:rounded-[32px] bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800 transition-colors w-full">
+                    <div className="p-4 sm:p-5 lg:p-6 bg-brand-500/20 border border-brand-500/30 rounded-2xl sm:rounded-3xl shrink-0">
+                      <perk.icon className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-brand-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-white">{perk.title}</h3>
+                      <p className="text-slate-300 text-lg sm:text-xl leading-relaxed">{perk.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-              <div className="flex items-start gap-6 p-6 rounded-3xl bg-brand-800/80 border border-brand-700">
-                <div className="p-4 bg-brand-700 rounded-2xl shrink-0">
-                  <ShieldCheck className="w-8 h-8 text-brand-100" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold mb-2">Safe Community</h3>
-                  <p className="text-brand-50 text-lg leading-relaxed">Verified profiles, family updates, and built-in SOS features keep you safe and secure.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-6 p-6 rounded-3xl bg-brand-800/80 border border-brand-700">
-                <div className="p-4 bg-brand-700 rounded-2xl shrink-0">
-                  <Users className="w-8 h-8 text-brand-100" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold mb-2">Meaningful Connection</h3>
-                  <p className="text-brand-50 text-lg leading-relaxed">Move easily from online discovery to real-life, offline participation seamlessly.</p>
-                </div>
-              </div>
-            </div>
+            </motion.div>
           </div>
         </section>
       </main>
 
-      {/* 5. Footer */}
-      <footer className="w-full bg-gray-900 text-gray-400 py-12 text-center">
-        <div className="max-w-4xl mx-auto px-6 flex flex-col items-center gap-6">
-          <div className="w-14 h-14 bg-gray-800 text-gray-200 rounded-2xl flex items-center justify-center font-bold text-3xl shadow-inner">
+      {/* FOOTER */}
+      <footer className="w-full bg-slate-950 text-slate-400 py-12 sm:py-16 md:py-20 text-center">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 flex flex-col items-center gap-6 sm:gap-8 md:gap-10">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-800 text-slate-200 rounded-2xl sm:rounded-[32px] flex items-center justify-center font-bold text-3xl sm:text-4xl shadow-inner border border-slate-700 shrink-0">
             S
           </div>
-          <p className="text-xl">© {new Date().getFullYear()} Saathi. All rights reserved.</p>
-          <div className="flex flex-wrap justify-center gap-6 mt-2">
-            <button className="text-lg hover:text-white underline underline-offset-4 decoration-gray-600">Privacy Policy</button>
-            <button className="text-lg hover:text-white underline underline-offset-4 decoration-gray-600">Terms of Service</button>
-            <button className="text-lg hover:text-white underline underline-offset-4 decoration-gray-600">Help Center</button>
+          <p className="text-xl sm:text-2xl">© {new Date().getFullYear()} Saathi. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-6 sm:gap-10 mt-2 sm:mt-4">
+            <button className="text-lg sm:text-xl font-medium hover:text-white transition-colors">Privacy Policy</button>
+            <button className="text-lg sm:text-xl font-medium hover:text-white transition-colors">Terms of Service</button>
+            <button className="text-lg sm:text-xl font-medium hover:text-white transition-colors">Help Center</button>
           </div>
         </div>
       </footer>

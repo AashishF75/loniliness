@@ -11,7 +11,7 @@ const generateToken = (id: string) => {
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, name, password, age, location, role } = req.body;
+    const { email, name, password, age, location, role, latitude, longitude } = req.body;
 
     if (!email || !name || !password) {
       res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -35,6 +35,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         age: age ? parseInt(age) : null,
         city: location,
         role: role || 'SENIOR',
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
       },
     });
 
@@ -81,7 +83,7 @@ export const getMe = async (req: Request | any, res: Response): Promise<void> =>
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, name: true, phone: true, role: true, city: true, hobbies: true }
+      select: { id: true, name: true, phone: true, role: true, city: true, hobbies: true, latitude: true, longitude: true }
     });
     res.json(user);
   } catch (error) {

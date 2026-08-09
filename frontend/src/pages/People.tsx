@@ -1,30 +1,80 @@
 import React, { useState, useEffect } from 'react';
-import { User, MapPin, Sparkles, Filter, Check, Clock } from 'lucide-react';
+import { User, MapPin, Sparkles, Filter, Check, Clock, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { connectionService } from '../services/connectionService';
 import { userService } from '../services/userService';
 
 export function People() {
+  const navigate = useNavigate();
   const [userInterests, setUserInterests] = useState<string[]>([]);
   const [people, setPeople] = useState<any[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [loadingIds, setLoadingIds] = useState<string[]>([]);
   const [connectedIds, setConnectedIds] = useState<string[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [radius, setRadius] = useState<number>(10);
+  const [interest, setInterest] = useState('');
+  const [commonInterestsOnly, setCommonInterestsOnly] = useState(false);
+  
+  // Available interests from current nearby users to populate filter dropdown
+  const [availableInterests, setAvailableInterests] = useState<string[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const fetchPeople = async (filtersObj?: any) => {
+    setLoading(true);
+    try {
       const user = await userService.getUser();
       if (user?.interests) setUserInterests(user.interests);
       
-      const nearbyPeople = await connectionService.getNearbyPeople();
+      const currentFilters = filtersObj || { radius, search, interest, commonInterestsOnly };
+      const [nearbyPeople, connections, outgoing] = await Promise.all([
+        connectionService.getNearbyPeople(currentFilters),
+        connectionService.getConnections(),
+        connectionService.getOutgoingRequests()
+      ]);
       setPeople(nearbyPeople);
+      
+      const acceptedIds = connections.map((c: any) => c.userId);
+      setConnectedIds([...acceptedIds, ...outgoing]);
+
+      // Extract unique interests from nearby people for the filter dropdown
+      if (!filtersObj) {
+         const allInterests = new Set<string>();
+         nearbyPeople.forEach((p:any) => p.interests?.forEach((i:string) => allInterests.add(i)));
+         setAvailableInterests(Array.from(allInterests).sort());
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Location access is needed to find people near you.');
+    } finally {
       setLoading(false);
-    };
-    fetchData();
+    }
+  };
+
+  useEffect(() => {
+    fetchPeople();
   }, []);
+
+  useEffect(() => {
+    // Only re-fetch when filters change and we are not initial loading
+    if (!loading) {
+       const timer = setTimeout(() => {
+         fetchPeople({ radius, search, interest, commonInterestsOnly });
+       }, 500); // debounce search
+       return () => clearTimeout(timer);
+    }
+  }, [search, radius, interest, commonInterestsOnly]);
+
+  const clearFilters = () => {
+    setSearch('');
+    setRadius(10);
+    setInterest('');
+    setCommonInterestsOnly(false);
+  };
 
   if (loading) {
     return (
@@ -65,45 +115,79 @@ export function People() {
 
       {filterOpen && (
         <Card className="bg-brand-50 border-brand-200 p-6 md:p-8 animate-in fade-in slide-in-from-top-2">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">Adjust Filters</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex flex-col gap-3">
-              <label className="text-lg font-bold text-gray-800">Distance</label>
-              <select className="p-4 rounded-xl border border-gray-300 bg-white text-lg focus:ring-2 focus:ring-brand-500 outline-none">
-                <option>Within 2 km</option>
-                <option>Within 5 km</option>
-                <option>Within 10 km</option>
-              </select>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-900">Search & Filters</h3>
+            <button onClick={clearFilters} className="text-brand-700 hover:text-brand-900 font-bold underline">
+              Clear Filters
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="flex flex-col gap-3 md:col-span-2">
+              <label className="text-lg font-bold text-gray-800">Search</label>
+              <input 
+                type="text" 
+                placeholder="Search companions..." 
+                className="p-4 rounded-xl border border-gray-300 bg-white text-lg focus:ring-2 focus:ring-brand-500 outline-none w-full"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
             <div className="flex flex-col gap-3">
-              <label className="text-lg font-bold text-gray-800">Age Range</label>
-              <select className="p-4 rounded-xl border border-gray-300 bg-white text-lg focus:ring-2 focus:ring-brand-500 outline-none">
-                <option>60 - 70 years</option>
-                <option>50 - 60 years</option>
-                <option>70+ years</option>
+              <label className="text-lg font-bold text-gray-800">Distance</label>
+              <select 
+                className="p-4 rounded-xl border border-gray-300 bg-white text-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                value={radius}
+                onChange={(e) => setRadius(Number(e.target.value))}
+              >
+                <option value={2}>Within 2 km</option>
+                <option value={5}>Within 5 km</option>
+                <option value={10}>Within 10 km</option>
               </select>
             </div>
             <div className="flex flex-col gap-3">
               <label className="text-lg font-bold text-gray-800">Interests</label>
-              <select className="p-4 rounded-xl border border-gray-300 bg-white text-lg focus:ring-2 focus:ring-brand-500 outline-none">
-                <option>Any Shared Interest</option>
-                <option>Yoga</option>
-                <option>Reading</option>
-                <option>Morning Walk</option>
+              <select 
+                className="p-4 rounded-xl border border-gray-300 bg-white text-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                value={interest}
+                onChange={(e) => setInterest(e.target.value)}
+              >
+                <option value="">All Interests</option>
+                {availableInterests.map(i => <option key={i} value={i}>{i}</option>)}
               </select>
             </div>
           </div>
-          <div className="flex justify-end mt-8">
-            <Button size="lg" className="text-xl h-14 px-8" onClick={() => setFilterOpen(false)}>Apply Filters</Button>
+          <div className="mt-6 flex items-center gap-3 bg-white p-4 rounded-xl border border-gray-300">
+            <input 
+              type="checkbox" 
+              id="commonInterests" 
+              className="w-6 h-6 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+              checked={commonInterestsOnly}
+              onChange={(e) => setCommonInterestsOnly(e.target.checked)}
+            />
+            <label htmlFor="commonInterests" className="text-xl font-bold text-gray-800 cursor-pointer select-none">
+              Common interests only
+            </label>
           </div>
         </Card>
       )}
 
-      {people.length === 0 && (
-        <Card className="p-10 text-center bg-gray-50 border-gray-300 border-dashed">
-          <p className="text-2xl text-gray-600 font-bold">No new people found nearby.</p>
+      {errorMsg ? (
+        <Card className="p-10 text-center bg-red-50 border-red-200">
+          <p className="text-2xl text-red-800 font-bold mb-2">{errorMsg}</p>
         </Card>
-      )}
+      ) : people.length === 0 ? (
+        <Card className="p-10 text-center bg-gray-50 border-gray-300 border-dashed">
+          {search || interest || commonInterestsOnly || radius < 10 ? (
+            <>
+              <p className="text-2xl text-gray-800 font-bold mb-2">No companions match these filters.</p>
+              <Button variant="outline" className="mt-4" onClick={clearFilters}>Clear Filters</Button>
+            </>
+          ) : (
+            <p className="text-2xl text-gray-800 font-bold mb-2">No Saathi members nearby yet.</p>
+          )}
+        </Card>
+      ) : null}
 
       <div className="flex flex-col gap-6">
         {people.map(profile => {
@@ -156,10 +240,18 @@ export function People() {
                 </div>
               </div>
 
-              <div className="w-full lg:w-auto flex shrink-0 mt-2 lg:mt-0">
+              <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-3 shrink-0 mt-4 lg:mt-0">
                 <Button 
                   size="lg" 
-                  className={`w-full lg:w-48 h-16 text-xl lg:text-2xl font-bold shadow-md ${isConnected ? 'bg-green-100 text-green-800 border-2 border-green-500 hover:bg-green-200 shadow-none' : ''}`}
+                  variant="outline"
+                  className="w-full sm:w-40 lg:w-48 h-16 text-xl lg:text-2xl font-bold border-2 border-brand-300 text-brand-700 hover:bg-brand-50"
+                  onClick={() => navigate(`/users/${profile.id}`, { state: { distance: profile.distance } })}
+                >
+                  <Eye className="w-6 h-6 mr-2" /> View Profile
+                </Button>
+                <Button 
+                  size="lg" 
+                  className={`w-full sm:w-40 lg:w-48 h-16 text-xl lg:text-2xl font-bold shadow-md ${isConnected ? 'bg-green-100 text-green-800 border-2 border-green-500 hover:bg-green-200 shadow-none' : ''}`}
                   onClick={() => handleConnect(profile)}
                   disabled={isConnected || isLoading}
                   variant={isConnected ? 'outline' : 'primary'}

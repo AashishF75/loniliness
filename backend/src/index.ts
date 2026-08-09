@@ -13,10 +13,18 @@ app.use(express.json());
 
 import authRoutes from './routes/auth.routes';
 import aiRoutes from './routes/ai.routes';
+import userRoutes from './routes/user.routes';
+import connectionRoutes from './routes/connection.routes';
+import messageRoutes from './routes/message.routes';
+import notificationRoutes from './routes/notification.routes';
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/connections', connectionRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Saathi API is running perfectly.' });

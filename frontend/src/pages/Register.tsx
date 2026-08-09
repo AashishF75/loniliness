@@ -13,11 +13,36 @@ export function Register() {
     email: '',
     password: '',
     age: '',
-    location: ''
+    location: '',
+    latitude: '',
+    longitude: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [locationMessage, setLocationMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationMessage('Geolocation is not supported by your browser.');
+      return;
+    }
+    setLocationMessage('Detecting location...');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData({
+          ...formData,
+          latitude: position.coords.latitude.toString(),
+          longitude: position.coords.longitude.toString()
+        });
+        setLocationMessage('Location detected successfully!');
+      },
+      (error) => {
+        console.warn(error);
+        setLocationMessage('Location access is needed to find people near you.');
+      }
+    );
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,16 +115,26 @@ export function Register() {
           
           <div className="flex flex-col gap-3">
             <label className="text-xl font-bold text-gray-800">Location (City or Area)</label>
-            <div className="relative">
-              <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-7 h-7 text-gray-400" />
-              <Input
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({...formData, location: e.target.value})}
-                placeholder="e.g. Delhi"
-                className="pl-16 h-16 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
-              />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-7 h-7 text-gray-400" />
+                <Input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  placeholder="e.g. Delhi"
+                  className="pl-16 h-16 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200 w-full"
+                />
+              </div>
+              <Button type="button" variant="outline" onClick={handleDetectLocation} className="h-16 px-6 text-lg font-bold border-2 shrink-0">
+                Detect Location
+              </Button>
             </div>
+            {locationMessage && (
+              <p className={`text-sm font-medium ${locationMessage.includes('successfully') ? 'text-green-600' : 'text-brand-600'}`}>
+                {locationMessage}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-3">

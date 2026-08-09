@@ -29,5 +29,15 @@ export const userService = {
       localStorage.setItem('saathi_onboarding', JSON.stringify(updated));
       return updated;
     }
+  },
+  
+  async getPublicProfile(id: string) {
+    try {
+      const data = await fetchApi(`/users/${id}`);
+      return data.success ? data.user : null;
+    } catch (err) {
+      console.error('Failed to get public profile', err);
+      return null;
+    }
   }
 };

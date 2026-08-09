@@ -25,6 +25,8 @@ model User {
   age           Int?
   city          String?
   locality      String?
+  latitude      Float?
+  longitude     Float?
   languages     String[]
   bio           String?
   verified      Boolean   @default(false)
@@ -42,6 +44,12 @@ model User {
   // Connections
   connections   Connection[] @relation("UserConnections")
   connectedTo   Connection[] @relation("ConnectedUsers")
+
+  // Messages
+  sentMessages      Message[] @relation("SentMessages")
+  receivedMessages  Message[] @relation("ReceivedMessages")
+
+  notifications Notification[]
 
   reminders     Reminder[]
   emergencies   EmergencyAlert[]
@@ -62,6 +70,30 @@ model Connection {
   connected   User     @relation("ConnectedUsers", fields: [connectedId], references: [id])
   status      String   @default("PENDING") // PENDING, ACCEPTED, BLOCKED
   createdAt   DateTime @default(now())
+}
+
+model Message {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  senderId    String   @db.ObjectId
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId  String   @db.ObjectId
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  content     String
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String   @db.ObjectId
+  user                User     @relation(fields: [userId], references: [id])
+  type                String   // NEW_CONNECTION_REQUEST, CONNECTION_ACCEPTED, NEW_MESSAGE
+  title               String
+  message             String
+  relatedUserId       String?  @db.ObjectId
+  relatedConnectionId String?  @db.ObjectId
+  relatedMessageId    String?  @db.ObjectId
+  isRead              Boolean  @default(false)
+  createdAt           DateTime @default(now())
 }
 
 model Activity {

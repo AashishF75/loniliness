@@ -5,7 +5,8 @@ import { Button } from '../components/ui/Button';
 import { connectionService } from '../services/connectionService';
 
 export function Connections() {
-  const [connections, setConnections] = useState<any[]>([]);
+  const [pending, setPending] = useState<any[]>([]);
+  const [connected, setConnected] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -13,8 +14,12 @@ export function Connections() {
   const [loading, setLoading] = useState(true);
 
   const fetchConnections = async () => {
-    const data = await connectionService.getConnections();
-    setConnections(data);
+    const [pendingData, connectedData] = await Promise.all([
+      connectionService.getIncomingRequests(),
+      connectionService.getConnections()
+    ]);
+    setPending(pendingData);
+    setConnected(connectedData);
     setLoading(false);
   };
 
@@ -34,47 +39,57 @@ export function Connections() {
   }
 
   const handleAccept = async (id: string) => {
-    const updated = connections.map(c => c.id === id ? { ...c, status: 'connected' } : c);
-    setConnections(updated);
-    await connectionService.updateConnections(updated);
+    const request = pending.find(p => p.id === id);
+    if (!request) return;
+    setPending(prev => prev.filter(p => p.id !== id));
+    setConnected(prev => [...prev, { ...request, status: 'ACCEPTED' }]);
+    await connectionService.updateConnectionStatus(id, 'ACCEPTED');
   };
 
   const handleDecline = async (id: string) => {
-    const updated = connections.filter(c => c.id !== id);
-    setConnections(updated);
-    await connectionService.removeConnection(id);
+    setPending(prev => prev.filter(p => p.id !== id));
+    await connectionService.updateConnectionStatus(id, 'REJECTED');
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageInput.trim() || !activeChatId) return;
 
-    const updated = connections.map(c => {
-      if (c.id === activeChatId) return { ...c, messages: [...(c.messages||[]), { sender: 'me', text: messageInput }] };
-      return c;
-    });
+    const activeConn = connected.find((c: any) => c.id === activeChatId);
+    if (!activeConn) return;
 
-    setConnections(updated);
-    await connectionService.updateConnections(updated);
-    setMessageInput('');
-
-    setTimeout(async () => {
-      const current = await connectionService.getConnections();
-      const afterResponse = current.map((c: any) => {
-        if (c.id === activeChatId) return { ...c, messages: [...(c.messages||[]), { sender: 'them', text: 'That sounds wonderful!' }] };
+    const sentMessage = await connectionService.sendChatMessage(activeConn.userId, messageInput);
+    if (sentMessage) {
+      const updated = connected.map(c => {
+        if (c.id === activeChatId) return { ...c, messages: [...(c.messages||[]), sentMessage] };
         return c;
       });
-      setConnections(afterResponse);
-      await connectionService.updateConnections(afterResponse);
-    }, 1500);
+      setConnected(updated);
+    }
+    setMessageInput('');
   };
 
+  const [fetchedChats, setFetchedChats] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
-    if (activeChatId) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [connections, activeChatId]);
+    if (activeChatId) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      
+      const activeConn = connected.find((c: any) => c.id === activeChatId);
+      if (activeConn && !fetchedChats[activeChatId]) {
+        setFetchedChats(prev => ({ ...prev, [activeChatId]: true }));
+        connectionService.getConversation(activeConn.userId).then(messages => {
+          setConnected(prev => prev.map(c => {
+            if (c.id === activeChatId) return { ...c, messages };
+            return c;
+          }));
+        });
+      }
+    }
+  }, [activeChatId, connected, fetchedChats]);
 
   if (activeChatId) {
-    const activeConnection = connections.find((c: any) => c.id === activeChatId);
+    const activeConnection = connected.find((c: any) => c.id === activeChatId);
     if (!activeConnection) return null;
 
     return (
@@ -120,8 +135,7 @@ export function Connections() {
     );
   }
 
-  const pending = connections.filter(c => c.status === 'pending');
-  const connected = connections.filter(c => c.status === 'connected');
+
 
   return (
     <div className="flex flex-col gap-8 pb-8">

@@ -7,7 +7,7 @@ import { userService } from '../services/userService';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const [userData, setUserData] = useState({ name: 'Ramesh', city: 'Delhi', area: 'Lajpat Nagar' });
+  const [userData, setUserData] = useState({ name: 'User', city: '', area: 'Location not set' });
   const [mood, setMood] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,9 +15,9 @@ export function Dashboard() {
       const user = await userService.getUser();
       if (user) {
         setUserData({
-          name: user.name || 'Ramesh',
+          name: user.name || 'User',
           city: '',
-          area: user.location || 'Lajpat Nagar, Delhi'
+          area: user.city || 'Location not set'
         });
       }
     };

@@ -13,6 +13,7 @@ import { AiCompanion } from './pages/AiCompanion';
 import { Connections } from './pages/Connections';
 import { Family } from './pages/Family';
 import { Profile } from './pages/Profile';
+import { PublicProfile } from './pages/PublicProfile';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/connections" element={<Connections />} />
           <Route path="/family" element={<Family />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/users/:id" element={<PublicProfile />} />
         </Route>
       </Routes>
     </BrowserRouter>
