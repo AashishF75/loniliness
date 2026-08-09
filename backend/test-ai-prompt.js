@@ -1,23 +1,17 @@
-import { Request, Response } from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+require('dotenv').config();
 
-export const recommend = async (req: Request, res: Response): Promise<void> => {
-  console.log('[AI Route] Reached /ai/recommend');
-  try {
-    const { user, nearbyPeople, activities, text } = req.body;
+async function testGemini() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+  
+  const user = { name: "Test User", age: 70, interests: ["reading"] };
+  const text = "I'm feeling lonely";
+  const nearbyPeople = [{ name: "Friend", age: 71, distance: 2 }];
+  const activities = [{ name: "Book Club", participants: 5 }];
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    console.log(`[AI Route] API Key exists: ${apiKey ? 'YES' : 'NO'}`);
-    if (!apiKey) {
-      res.status(500).json({ success: false, message: 'GEMINI_API_KEY is not configured on the server.' });
-      return;
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
-    console.log('[AI Route] Gemini client initialized');
-
-    const prompt = `
+  const prompt = `
 You are Saathi, a friendly and supportive AI companion for senior citizens in India.
 Do not claim to be a medical professional and do not provide medical diagnosis.
 Keep your response supportive and simple.
@@ -47,26 +41,21 @@ Output your response ONLY in JSON format exactly like this:
 Return ONLY valid JSON.
 `;
 
-    console.log('[AI Route] Sending request to Gemini API...');
+  try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const responseText = response.text();
-    console.log('[AI Route] Gemini response received successfully');
+    console.log("Response text:", responseText);
     
-    // Extract JSON
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('Invalid response format from Gemini');
     }
-
     const jsonResponse = JSON.parse(jsonMatch[0]);
-
-    res.json({
-      success: true,
-      data: jsonResponse
-    });
-  } catch (error: any) {
-    console.error(`[AI Route] Error generating recommendations (HTTP 500):`, error.message || error);
-    res.status(500).json({ success: false, message: 'Failed to generate AI recommendations.' });
+    console.log("Parsed JSON:", jsonResponse);
+  } catch (err) {
+    console.error("Error:", err.message);
   }
-};
+}
+
+testGemini();
