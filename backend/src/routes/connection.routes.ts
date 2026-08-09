@@ -15,10 +15,12 @@ router.post('/request', protect, sendConnectionRequest);
 router.get('/requests', protect, getIncomingRequests);
 router.get('/requests/outgoing', protect, getOutgoingRequests);
 router.patch('/:id/accept', protect, (req, res) => {
+  req.body = req.body || {};
   req.body.status = 'ACCEPTED';
   updateConnectionStatus(req, res);
 });
 router.patch('/:id/reject', protect, (req, res) => {
+  req.body = req.body || {};
   req.body.status = 'REJECTED';
   updateConnectionStatus(req, res);
 });
