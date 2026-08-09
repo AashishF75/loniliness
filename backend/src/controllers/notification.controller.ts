@@ -14,7 +14,16 @@ export const getNotifications = async (req: Request | any, res: Response): Promi
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json({ success: true, notifications });
+    // Manually attach connection status
+    const formattedNotifications = await Promise.all(notifications.map(async (notif: any) => {
+      if (notif.type === 'NEW_CONNECTION_REQUEST' && notif.relatedConnectionId) {
+        const conn = await prisma.connection.findUnique({ where: { id: notif.relatedConnectionId } });
+        return { ...notif, connectionStatus: conn ? conn.status : null };
+      }
+      return notif;
+    }));
+
+    res.json({ success: true, notifications: formattedNotifications });
   } catch (error: any) {
     console.error('Get notifications error:', error);
     res.status(500).json({ success: false, message: 'Server error' });

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Users, Calendar, MessageCircle, Heart, User, Bell, Check, CheckCircle2 } from 'lucide-react';
+import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar } from 'lucide-react';
 import { notificationService } from '../../services/notificationService';
+import { connectionService } from '../../services/connectionService';
 
 export function RootLayout() {
   const location = useLocation();
@@ -51,6 +52,30 @@ export function RootLayout() {
     await notificationService.markAllAsRead();
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     setUnreadCount(0);
+  };
+
+  const handleAcceptConnection = async (notif: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (notif.relatedConnectionId) {
+      await connectionService.updateConnectionStatus(notif.relatedConnectionId, 'ACCEPTED');
+      window.dispatchEvent(new Event('connections_updated'));
+      await notificationService.markAsRead(notif.id);
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true, type: 'CONNECTION_ACCEPTED', message: 'You accepted the connection request.' } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+  };
+
+  const handleRejectConnection = async (notif: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (notif.relatedConnectionId) {
+      await connectionService.updateConnectionStatus(notif.relatedConnectionId, 'REJECTED');
+      window.dispatchEvent(new Event('connections_updated'));
+      await notificationService.markAsRead(notif.id);
+      setNotifications(prev => prev.filter(n => n.id !== notif.id));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    }
   };
 
   
@@ -146,8 +171,14 @@ export function RootLayout() {
                               <span className="text-xs text-gray-500 block mt-2 font-medium">
                                 {new Date(notif.createdAt).toLocaleDateString()} {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
+                              {(notif.type === 'NEW_CONNECTION_REQUEST' && notif.connectionStatus === 'PENDING') && (
+                                <div className="flex gap-2 mt-3">
+                                  <button onClick={(e) => handleAcceptConnection(notif, e)} className="px-4 py-1.5 bg-brand-600 text-white rounded-lg font-bold text-sm hover:bg-brand-700 transition-colors">Accept</button>
+                                  <button onClick={(e) => handleRejectConnection(notif, e)} className="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-300 transition-colors">Reject</button>
+                                </div>
+                              )}
                             </div>
-                            {!notif.isRead && (
+                            {!notif.isRead && notif.type !== 'NEW_CONNECTION_REQUEST' && (
                               <button 
                                 onClick={(e) => handleMarkAsRead(notif.id, e)}
                                 className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/50 text-gray-500 hover:text-brand-600"
