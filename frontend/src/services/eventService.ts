@@ -15,7 +15,7 @@ export interface EventData {
 }
 
 export const eventService = {
-  async getEvents(filters?: { category?: string; search?: string; date?: string; radius?: number; filter?: string }) {
+  async getEvents(filters?: { category?: string; search?: string; date?: string; radius?: number; filter?: string; sort?: string }) {
     try {
       const params = new URLSearchParams();
       if (filters?.category) params.append('category', filters.category);
@@ -23,6 +23,7 @@ export const eventService = {
       if (filters?.date) params.append('date', filters.date);
       if (filters?.radius) params.append('radius', filters.radius.toString());
       if (filters?.filter) params.append('filter', filters.filter);
+      if (filters?.sort) params.append('sort', filters.sort);
 
       const data = await fetchApi(`/events?${params.toString()}`);
       if (data && data.success) {

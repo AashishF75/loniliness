@@ -9,6 +9,64 @@ export const getNotifications = async (req: Request | any, res: Response): Promi
       return;
     }
 
+    // Evaluate Event Reminders
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user && user.eventReminder !== 'NONE') {
+      const now = new Date();
+      
+      const upcomingEvents = await prisma.event.findMany({
+        where: {
+          status: 'ACTIVE',
+          date: { gt: now },
+          OR: [
+            { participants: { some: { userId } } },
+            { savedBy: { some: { userId } } }
+          ]
+        }
+      });
+
+      for (const event of upcomingEvents) {
+        const timeDiffHours = (new Date(event.date).getTime() - now.getTime()) / (1000 * 60 * 60);
+        let reminderType = null;
+        let title = '';
+        let message = '';
+
+        if (user.eventReminder === '1_DAY' && timeDiffHours <= 24 && timeDiffHours > 1) {
+          reminderType = '1_DAY';
+          title = 'Upcoming Event Tomorrow';
+          message = `${event.title} starts tomorrow.`;
+        } else if (user.eventReminder === '1_HOUR' && timeDiffHours <= 1 && timeDiffHours > 0) {
+          reminderType = '1_HOUR';
+          title = 'Event Starts Soon';
+          message = `${event.title} starts in less than an hour!`;
+        }
+
+        if (reminderType) {
+          // Check if reminder already exists
+          const existing = await prisma.notification.findFirst({
+            where: {
+              userId,
+              relatedEventId: event.id,
+              type: 'EVENT_REMINDER',
+              title
+            }
+          });
+
+          if (!existing) {
+            await prisma.notification.create({
+              data: {
+                userId,
+                type: 'EVENT_REMINDER',
+                title,
+                message,
+                relatedEventId: event.id
+              }
+            });
+          }
+        }
+      }
+    }
+
     const notifications = await prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' }

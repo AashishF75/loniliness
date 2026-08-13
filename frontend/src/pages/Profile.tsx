@@ -34,7 +34,8 @@ export function Profile() {
       city: user.city || '',
       locality: user.locality || user.area || '',
       interests: (user.interests || (user.hobbies ? user.hobbies.map((h: any) => h.name || h) : [])).join(', '),
-      bio: user.bio || ''
+      bio: user.bio || '',
+      eventReminder: user.eventReminder || '1_DAY'
     });
     setIsEditing(true);
   };
@@ -49,7 +50,8 @@ export function Profile() {
         city: editData.city,
         locality: editData.locality,
         interests: interestsArray,
-        bio: editData.bio
+        bio: editData.bio,
+        eventReminder: editData.eventReminder
       });
       setUser(updated);
       setIsEditing(false);
@@ -181,6 +183,18 @@ export function Profile() {
                   onChange={e => setEditData({...editData, bio: e.target.value})}
                   className="flex w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent min-h-[100px]"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Event Reminders</label>
+                <select 
+                  value={editData.eventReminder}
+                  onChange={e => setEditData({...editData, eventReminder: e.target.value})}
+                  className="flex w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
+                >
+                  <option value="1_DAY">1 Day Before</option>
+                  <option value="1_HOUR">1 Hour Before</option>
+                  <option value="NONE">Disable Reminders</option>
+                </select>
               </div>
             </div>
 

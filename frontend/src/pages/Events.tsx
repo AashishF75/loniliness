@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Users, Clock, Search, Plus, X, ArrowLeft, Filter, Bookmark, BookmarkCheck, Trash2, MessageCircle, Send } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Search, Plus, X, ArrowLeft, Filter, Bookmark, BookmarkCheck, Trash2, MessageCircle, Send, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { eventService } from '../services/eventService';
 import type { EventData } from '../services/eventService';
@@ -22,6 +22,7 @@ export function Events() {
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('All');
   const [radiusFilter, setRadiusFilter] = useState('All');
+  const [sortFilter, setSortFilter] = useState('soonest');
   
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -50,7 +51,7 @@ export function Events() {
   useEffect(() => {
     fetchEvents();
     fetchUser();
-  }, [category, dateFilter, radiusFilter, activeTab]);
+  }, [category, dateFilter, radiusFilter, activeTab, sortFilter]);
 
   const fetchUser = async () => {
     const user = await userService.getUser();
@@ -101,6 +102,8 @@ export function Events() {
       if (activeTab === 'recommended') filters.filter = 'recommended';
       else if (activeTab === 'saved') filters.filter = 'saved';
       else if (activeTab === 'mine') filters.filter = 'mine';
+      
+      filters.sort = sortFilter;
       
       const data = await eventService.getEvents(filters);
       setEvents(data);
@@ -242,6 +245,16 @@ export function Events() {
     }
   };
 
+  const handleShare = (id: string) => {
+    const url = `${window.location.origin}/events/${id}`;
+    if (navigator.share) {
+      navigator.share({ title: 'Saathi Event', url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url);
+      alert('Event link copied to clipboard!');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'UPCOMING': return 'bg-green-100 text-green-700';
@@ -324,7 +337,18 @@ export function Events() {
             <option value="All">Any Distance</option>
             <option value="5">Within 5 km</option>
             <option value="10">Within 10 km</option>
-            <option value="20">Within 20 km</option>
+            <option value="25">Within 25 km</option>
+          </select>
+
+          <select 
+            value={sortFilter}
+            onChange={(e) => setSortFilter(e.target.value)}
+            className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 min-w-[140px]"
+          >
+            <option value="soonest">Soonest</option>
+            <option value="recommended">Recommended</option>
+            <option value="nearest">Nearest</option>
+            <option value="available">Most Available</option>
           </select>
         </div>
       </Card>
@@ -343,7 +367,12 @@ export function Events() {
           <div className="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">No events found</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            {activeTab === 'recommended' ? 'No events matching your interests nearby yet.' :
+             activeTab === 'saved' ? 'You haven\'t saved any events yet.' :
+             activeTab === 'mine' ? 'You haven\'t created any events yet.' :
+             search ? 'No events found.' : 'No events found'}
+          </h3>
           <p className="text-gray-500 max-w-md mx-auto mb-6">There are no events matching your filters right now. Why not create one yourself?</p>
           <Button onClick={() => setShowCreateModal(true)}>Create an Event</Button>
         </Card>
@@ -405,7 +434,7 @@ export function Events() {
                 {event.createdById === currentUser?.id ? (
                   <Button variant="primary" className="flex-1 opacity-50 cursor-not-allowed" disabled>Owner</Button>
                 ) : event.hasJoined ? (
-                  <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" onClick={(e) => { e.stopPropagation(); handleLeave(event.id); }}>Leave</Button>
+                  <Button variant="outline" className="flex-1 text-brand-600 border-brand-200 bg-brand-50" onClick={(e) => { e.stopPropagation(); handleLeave(event.id); }}>Joined ✓</Button>
                 ) : event.participantCount >= event.maxParticipants ? (
                   <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>Full</Button>
                 ) : (
@@ -438,16 +467,24 @@ export function Events() {
                     {selectedEvent.dynamicStatus}
                   </div>
                 </div>
-                <button 
-                  onClick={() => handleSave(selectedEvent.id, selectedEvent.isSaved)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors ${selectedEvent.isSaved ? 'bg-brand-50 border-brand-200 text-brand-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                >
-                  {selectedEvent.isSaved ? (
-                    <><BookmarkCheck className="w-4 h-4" /> <span className="text-sm font-bold">Saved</span></>
-                  ) : (
-                    <><Bookmark className="w-4 h-4" /> <span className="text-sm font-bold">Save</span></>
-                  )}
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleShare(selectedEvent.id); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <Share2 className="w-4 h-4" /> <span className="text-sm font-bold">Share</span>
+                  </button>
+                  <button 
+                    onClick={() => handleSave(selectedEvent.id, selectedEvent.isSaved)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors ${selectedEvent.isSaved ? 'bg-brand-50 border-brand-200 text-brand-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {selectedEvent.isSaved ? (
+                      <><BookmarkCheck className="w-4 h-4" /> <span className="text-sm font-bold">Saved</span></>
+                    ) : (
+                      <><Bookmark className="w-4 h-4" /> <span className="text-sm font-bold">Save</span></>
+                    )}
+                  </button>
+                </div>
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">{selectedEvent.title}</h2>
               

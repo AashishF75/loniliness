@@ -96,7 +96,7 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
     const userId = req.user?.id;
     
     // Filters
-    const { category, search, date, latitude, longitude, radius, filter } = req.query;
+    const { category, search, date, latitude, longitude, radius, filter, sort } = req.query;
     
     let whereClause: any = {};
     
@@ -105,7 +105,11 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
     }
     
     if (search) {
-      whereClause.title = { contains: search as string, mode: 'insensitive' };
+      whereClause.OR = [
+        { title: { contains: search as string, mode: 'insensitive' } },
+        { category: { contains: search as string, mode: 'insensitive' } },
+        { location: { contains: search as string, mode: 'insensitive' } }
+      ];
     }
     
     if (date === 'upcoming') {
@@ -214,9 +218,38 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
     }
 
     // Distance filter
-    if (radius) {
+    if (radius && radius !== 'All') {
       const maxRadius = parseFloat(radius as string);
-      formattedEvents = formattedEvents.filter((e: any) => e.distance === null || e.distance <= maxRadius);
+      formattedEvents = formattedEvents.filter((e: any) => e.distance !== null && e.distance <= maxRadius);
+    }
+
+    // Sorting
+    if (sort === 'nearest') {
+      formattedEvents.sort((a: any, b: any) => {
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return a.distance - b.distance;
+      });
+    } else if (sort === 'soonest') {
+      formattedEvents.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    } else if (sort === 'available') {
+      formattedEvents.sort((a: any, b: any) => {
+        const aAvail = a.maxParticipants - a.participantCount;
+        const bAvail = b.maxParticipants - b.participantCount;
+        return bAvail - aAvail;
+      });
+    } else if (sort === 'recommended') {
+      formattedEvents.sort((a: any, b: any) => {
+        // High priority: recommended
+        if (a.recommended && !b.recommended) return -1;
+        if (!a.recommended && b.recommended) return 1;
+        // High priority: upcoming vs completed
+        if (a.dynamicStatus === 'UPCOMING' && b.dynamicStatus !== 'UPCOMING') return -1;
+        if (a.dynamicStatus !== 'UPCOMING' && b.dynamicStatus === 'UPCOMING') return 1;
+        // Then by distance
+        if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
+        return 0;
+      });
     }
 
     res.json({ success: true, events: formattedEvents });
@@ -349,7 +382,8 @@ export const joinEvent = async (req: Request | any, res: Response): Promise<void
           userId: event.createdById,
           type: 'EVENT_PARTICIPANT_JOINED',
           title: 'New Participant',
-          message: `Someone new joined ${event.title}.`,
+          message: `${req.user?.name || 'Someone'} joined your event ${event.title}.`,
+          relatedEventId: event.id,
           relatedUserId: userId
         }
       });
@@ -462,7 +496,8 @@ export const updateEvent = async (req: Request | any, res: Response): Promise<vo
             userId: participant.userId,
             type: 'EVENT_UPDATED',
             title: 'Event Updated',
-            message: `${updatedEvent.title} has been updated.`
+            message: `${updatedEvent.title} has been updated.`,
+            relatedEventId: updatedEvent.id
           }
         });
       }
@@ -572,7 +607,8 @@ export const cancelEvent = async (req: Request | any, res: Response): Promise<vo
             userId: p.userId,
             type: 'EVENT_CANCELLED',
             title: 'Event Cancelled',
-            message: `${event.title} has been cancelled.`
+            message: `${event.title} has been cancelled.`,
+            relatedEventId: event.id
           }
         });
       }

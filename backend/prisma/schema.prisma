@@ -32,6 +32,7 @@ model User {
   verified      Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  eventReminder String    @default("1_DAY") // 1_DAY, 1_HOUR, NONE
 
   // Many-to-many Hobbies (MongoDB style)
   hobbyIds      String[]  @db.ObjectId
@@ -106,6 +107,7 @@ model Notification {
   relatedUserId       String?  @db.ObjectId
   relatedConnectionId String?  @db.ObjectId
   relatedMessageId    String?  @db.ObjectId
+  relatedEventId      String?  @db.ObjectId
   isRead              Boolean  @default(false)
   createdAt           DateTime @default(now())
 }

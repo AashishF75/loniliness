@@ -191,7 +191,7 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
       return;
     }
 
-    const { name, age, city, locality, bio, interests } = req.body;
+    const { name, age, city, locality, bio, interests, eventReminder } = req.body;
     
     const updateData: any = {};
     if (name) updateData.name = name;
@@ -199,6 +199,7 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
     if (city !== undefined) updateData.city = city;
     if (locality !== undefined) updateData.locality = locality;
     if (bio !== undefined) updateData.bio = bio;
+    if (eventReminder !== undefined) updateData.eventReminder = eventReminder;
     
     if (interests && Array.isArray(interests)) {
       const hobbyIds = [];
@@ -225,6 +226,7 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
         locality: true,
         bio: true,
         avatar: true,
+        eventReminder: true,
         hobbies: { select: { name: true } }
       }
     });

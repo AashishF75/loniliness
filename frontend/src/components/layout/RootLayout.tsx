@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar, Link2 } from 'lucide-react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar, Link2, XCircle } from 'lucide-react';
 import { notificationService } from '../../services/notificationService';
 import { connectionService } from '../../services/connectionService';
 
@@ -9,6 +9,7 @@ export function RootLayout() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,6 +76,17 @@ export function RootLayout() {
       await notificationService.markAsRead(notif.id);
       setNotifications(prev => prev.filter(n => n.id !== notif.id));
       setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+  };
+
+  const handleNotificationClick = (notif: any) => {
+    if (!notif.isRead && notif.type !== 'NEW_CONNECTION_REQUEST') {
+      handleMarkAsRead(notif.id, { preventDefault: () => {}, stopPropagation: () => {} } as any);
+    }
+    
+    if (notif.type.startsWith('EVENT_')) {
+      setShowNotifications(false);
+      navigate('/events');
     }
   };
 
@@ -156,7 +168,8 @@ export function RootLayout() {
                         notifications.map((notif: any) => (
                           <div 
                             key={notif.id} 
-                            className={`p-4 mb-2 rounded-xl flex gap-3 transition-colors ${
+                            onClick={() => handleNotificationClick(notif)}
+                            className={`p-4 mb-2 rounded-xl flex gap-3 transition-colors ${notif.type.startsWith('EVENT_') ? 'cursor-pointer ' : ''}${
                               notif.isRead ? 'bg-white hover:bg-gray-50' : 'bg-brand-50 hover:bg-brand-100'
                             }`}
                           >
@@ -164,6 +177,10 @@ export function RootLayout() {
                               {notif.type === 'NEW_CONNECTION_REQUEST' ? <Users className="w-6 h-6 text-brand-600" /> :
                                notif.type === 'CONNECTION_ACCEPTED' ? <CheckCircle2 className="w-6 h-6 text-green-600" /> :
                                notif.type === 'NEW_MESSAGE' ? <MessageCircle className="w-6 h-6 text-blue-600" /> :
+                               notif.type === 'EVENT_REMINDER' ? <Bell className="w-6 h-6 text-yellow-600" /> :
+                               notif.type === 'EVENT_UPDATED' ? <Calendar className="w-6 h-6 text-blue-600" /> :
+                               notif.type === 'EVENT_CANCELLED' ? <XCircle className="w-6 h-6 text-red-600" /> :
+                               notif.type === 'EVENT_PARTICIPANT_JOINED' ? <Users className="w-6 h-6 text-green-600" /> :
                                <Bell className="w-6 h-6 text-gray-500" />
                               }
                             </div>
