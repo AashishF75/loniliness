@@ -144,5 +144,31 @@ export const eventService = {
       console.error('Failed to cancel event', err);
       throw err;
     }
+  },
+
+  async getEventMessages(eventId: string) {
+    try {
+      const data = await fetchApi(`/events/${eventId}/messages`);
+      if (data && data.success) {
+        return data.messages;
+      }
+      return [];
+    } catch (err) {
+      console.error('Failed to get event messages', err);
+      throw err;
+    }
+  },
+
+  async sendEventMessage(eventId: string, content: string) {
+    try {
+      const data = await fetchApi(`/events/${eventId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ content }),
+      });
+      return data;
+    } catch (err) {
+      console.error('Failed to send event message', err);
+      throw err;
+    }
   }
 };

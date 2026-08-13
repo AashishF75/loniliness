@@ -343,6 +343,18 @@ export const joinEvent = async (req: Request | any, res: Response): Promise<void
       }
     });
 
+    if (event.createdById !== userId) {
+      await prisma.notification.create({
+        data: {
+          userId: event.createdById,
+          type: 'EVENT_PARTICIPANT_JOINED',
+          title: 'New Participant',
+          message: `Someone new joined ${event.title}.`,
+          relatedUserId: userId
+        }
+      });
+    }
+
     res.json({ success: true, message: 'Successfully joined the event' });
   } catch (error: any) {
     console.error('Join Event Error:', error.message || error);
@@ -568,6 +580,107 @@ export const cancelEvent = async (req: Request | any, res: Response): Promise<vo
     
     res.json({ success: true, message: 'Event cancelled successfully' });
   } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const getEventMessages = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
+
+    const { id } = req.params;
+    
+    // Check if event exists and user is participant
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        participants: {
+          where: { userId }
+        }
+      }
+    });
+
+    if (!event) { res.status(404).json({ success: false, message: 'Event not found' }); return; }
+    
+    if (event.createdById !== userId && event.participants.length === 0) {
+      res.status(403).json({ success: false, message: 'You must join this event to view messages' });
+      return;
+    }
+
+    const messages = await prisma.eventMessage.findMany({
+      where: { eventId: id },
+      include: {
+        sender: {
+          select: { id: true, name: true, avatar: true }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    res.json({ success: true, messages });
+  } catch (error: any) {
+    console.error('Get Event Messages Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const sendEventMessage = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
+
+    const { id } = req.params;
+    const { content } = req.body;
+
+    if (!content || typeof content !== 'string' || content.trim() === '') {
+      res.status(400).json({ success: false, message: 'Message content is required' });
+      return;
+    }
+
+    if (content.length > 1000) {
+      res.status(400).json({ success: false, message: 'Message is too long' });
+      return;
+    }
+
+    // Check if event exists, is active, and user is participant
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        participants: {
+          where: { userId }
+        }
+      }
+    });
+
+    if (!event) { res.status(404).json({ success: false, message: 'Event not found' }); return; }
+    
+    if (event.status === 'CANCELLED') {
+      res.status(400).json({ success: false, message: 'Cannot send messages to a cancelled event' });
+      return;
+    }
+
+    if (event.createdById !== userId && event.participants.length === 0) {
+      res.status(403).json({ success: false, message: 'You must join this event to send messages' });
+      return;
+    }
+
+    const message = await prisma.eventMessage.create({
+      data: {
+        eventId: id,
+        senderId: userId,
+        content: content.trim()
+      },
+      include: {
+        sender: {
+          select: { id: true, name: true, avatar: true }
+        }
+      }
+    });
+
+    res.json({ success: true, message });
+  } catch (error: any) {
+    console.error('Send Event Message Error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };

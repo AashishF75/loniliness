@@ -66,6 +66,7 @@ model User {
   createdEvents    Event[]  @relation("EventCreator")
   eventParticipations EventParticipant[]
   savedEvents      SavedEvent[]
+  eventMessages    EventMessage[]
 }
 
 model Hobby {
@@ -193,6 +194,7 @@ model Event {
 
   participants    EventParticipant[]
   savedBy         SavedEvent[]
+  messages        EventMessage[]
 }
 
 model EventParticipant {
@@ -215,4 +217,14 @@ model SavedEvent {
   savedAt   DateTime @default(now())
 
   @@unique([eventId, userId])
+}
+
+model EventMessage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  eventId   String   @db.ObjectId
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  senderId  String   @db.ObjectId
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
 }
