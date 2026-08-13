@@ -15,6 +15,7 @@ import { Connections } from './pages/Connections';
 import { Family } from './pages/Family';
 import { Profile } from './pages/Profile';
 import { PublicProfile } from './pages/PublicProfile';
+import { Events } from './pages/Events';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/people" element={<People />} />
             <Route path="/activities" element={<Activities />} />
+            <Route path="/events" element={<Events />} />
             <Route path="/ai-companion" element={<AiCompanion />} />
             <Route path="/connections" element={<Connections />} />
             <Route path="/family" element={<Family />} />

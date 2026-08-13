@@ -83,7 +83,8 @@ export function RootLayout() {
     { path: '/dashboard', label: 'Home', icon: Home },
     { path: '/people', label: 'People', icon: Users },
     { path: '/connections', label: 'Connections', icon: Link2 },
-    { path: '/activities', label: 'Events', icon: Calendar },
+    { path: '/events', label: 'Events', icon: Calendar },
+    { path: '/activities', label: 'Activities', icon: Calendar },
     { path: '/ai-companion', label: 'Saathi', icon: MessageCircle },
     { path: '/family', label: 'Family', icon: Heart },
   ];
