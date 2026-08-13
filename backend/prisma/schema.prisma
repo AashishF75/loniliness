@@ -65,6 +65,7 @@ model User {
   // Events
   createdEvents    Event[]  @relation("EventCreator")
   eventParticipations EventParticipant[]
+  savedEvents      SavedEvent[]
 }
 
 model Hobby {
@@ -182,6 +183,7 @@ model Event {
   startTime       String
   endTime         String
   maxParticipants Int
+  status          String   @default("ACTIVE") // ACTIVE, CANCELLED
   
   createdById     String   @db.ObjectId
   creator         User     @relation("EventCreator", fields: [createdById], references: [id])
@@ -190,6 +192,7 @@ model Event {
   updatedAt       DateTime @updatedAt
 
   participants    EventParticipant[]
+  savedBy         SavedEvent[]
 }
 
 model EventParticipant {
@@ -199,6 +202,17 @@ model EventParticipant {
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   joinedAt  DateTime @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model SavedEvent {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  eventId   String   @db.ObjectId
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedAt   DateTime @default(now())
 
   @@unique([eventId, userId])
 }

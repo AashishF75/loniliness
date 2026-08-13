@@ -15,13 +15,14 @@ export interface EventData {
 }
 
 export const eventService = {
-  async getEvents(filters?: { category?: string; search?: string; date?: string; radius?: number }) {
+  async getEvents(filters?: { category?: string; search?: string; date?: string; radius?: number; filter?: string }) {
     try {
       const params = new URLSearchParams();
       if (filters?.category) params.append('category', filters.category);
       if (filters?.search) params.append('search', filters.search);
       if (filters?.date) params.append('date', filters.date);
       if (filters?.radius) params.append('radius', filters.radius.toString());
+      if (filters?.filter) params.append('filter', filters.filter);
 
       const data = await fetchApi(`/events?${params.toString()}`);
       if (data && data.success) {
@@ -105,6 +106,42 @@ export const eventService = {
       return data;
     } catch (err) {
       console.error('Failed to delete event', err);
+      throw err;
+    }
+  },
+
+  async saveEvent(id: string) {
+    try {
+      const data = await fetchApi(`/events/${id}/save`, {
+        method: 'POST',
+      });
+      return data;
+    } catch (err) {
+      console.error('Failed to save event', err);
+      throw err;
+    }
+  },
+
+  async unsaveEvent(id: string) {
+    try {
+      const data = await fetchApi(`/events/${id}/save`, {
+        method: 'DELETE',
+      });
+      return data;
+    } catch (err) {
+      console.error('Failed to unsave event', err);
+      throw err;
+    }
+  },
+
+  async cancelEvent(id: string) {
+    try {
+      const data = await fetchApi(`/events/${id}/cancel`, {
+        method: 'POST',
+      });
+      return data;
+    } catch (err) {
+      console.error('Failed to cancel event', err);
       throw err;
     }
   }

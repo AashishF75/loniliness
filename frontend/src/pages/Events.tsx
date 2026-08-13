@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Users, Clock, Search, Plus, X, ArrowLeft, Filter } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Search, Plus, X, ArrowLeft, Filter, Bookmark, BookmarkCheck, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { eventService } from '../services/eventService';
 import type { EventData } from '../services/eventService';
 import { userService } from '../services/userService';
@@ -13,6 +14,8 @@ export function Events() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('upcoming');
+  const navigate = useNavigate();
   
   // Filters
   const [category, setCategory] = useState('All');
@@ -42,7 +45,7 @@ export function Events() {
   useEffect(() => {
     fetchEvents();
     fetchUser();
-  }, [category, dateFilter, radiusFilter]);
+  }, [category, dateFilter, radiusFilter, activeTab]);
 
   const fetchUser = async () => {
     const user = await userService.getUser();
@@ -58,6 +61,10 @@ export function Events() {
       if (searchQuery) filters.search = searchQuery;
       if (dateFilter !== 'All') filters.date = dateFilter.toLowerCase();
       if (radiusFilter !== 'All') filters.radius = parseInt(radiusFilter);
+      
+      if (activeTab === 'recommended') filters.filter = 'recommended';
+      else if (activeTab === 'saved') filters.filter = 'saved';
+      else if (activeTab === 'mine') filters.filter = 'mine';
       
       const data = await eventService.getEvents(filters);
       setEvents(data);
@@ -170,6 +177,45 @@ export function Events() {
     }
   };
 
+  const handleSave = async (id: string, isSaved: boolean) => {
+    try {
+      if (isSaved) {
+        await eventService.unsaveEvent(id);
+      } else {
+        await eventService.saveEvent(id);
+      }
+      if (selectedEvent && selectedEvent.id === id) {
+        setSelectedEvent({ ...selectedEvent, isSaved: !isSaved });
+      }
+      setEvents(events.map(e => e.id === id ? { ...e, isSaved: !isSaved } : e));
+    } catch (err: any) {
+      alert(err.message || 'Failed to update saved status');
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    if (!window.confirm('Are you sure you want to cancel this event?')) return;
+    try {
+      await eventService.cancelEvent(id);
+      if (selectedEvent && selectedEvent.id === id) {
+        setSelectedEvent({ ...selectedEvent, dynamicStatus: 'CANCELLED' });
+      }
+      setEvents(events.map(e => e.id === id ? { ...e, dynamicStatus: 'CANCELLED' } : e));
+    } catch (err: any) {
+      alert(err.message || 'Failed to cancel event');
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'UPCOMING': return 'bg-green-100 text-green-700';
+      case 'ONGOING': return 'bg-yellow-100 text-yellow-700';
+      case 'COMPLETED': return 'bg-gray-200 text-gray-700';
+      case 'CANCELLED': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -182,6 +228,27 @@ export function Events() {
           Create Event
         </Button>
       </div>
+
+      <Card className="bg-white border-b border-gray-100 rounded-none shadow-sm -mx-4 px-4 sm:mx-0 sm:px-0 sm:rounded-xl mb-6">
+        <div className="flex overflow-x-auto hide-scrollbar">
+          {['upcoming', 'recommended', 'saved', 'mine'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 sm:px-6 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab
+                  ? 'border-brand-500 text-brand-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {tab === 'upcoming' && '📅 Upcoming Events'}
+              {tab === 'recommended' && '✨ Recommended For You'}
+              {tab === 'saved' && '🔖 Saved Events'}
+              {tab === 'mine' && '👤 My Events'}
+            </button>
+          ))}
+        </div>
+      </Card>
 
       <Card className="p-4 bg-white border-brand-100 flex flex-col sm:flex-row gap-4">
         <form onSubmit={handleSearch} className="flex-1 flex gap-2 relative">
@@ -255,7 +322,13 @@ export function Events() {
                   </div>
                 )}
                 <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-xl font-bold text-gray-900 line-clamp-2">{event.title}</h3>
+                  <h3 className="text-xl font-bold text-gray-900 line-clamp-2 pr-2">{event.title}</h3>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleSave(event.id, event.isSaved); }}
+                    className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors ${event.isSaved ? 'text-brand-500' : 'text-gray-400'}`}
+                  >
+                    {event.isSaved ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
+                  </button>
                 </div>
                 
                 <div className="space-y-2 mb-4">
@@ -277,8 +350,17 @@ export function Events() {
                   </div>
                 </div>
                 
-                <div className="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-lg">
-                  {event.category}
+                <div className="flex justify-between items-center mt-4">
+                  <div className="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-lg">
+                    {event.category}
+                  </div>
+                  <div className={`text-xs font-bold px-2 py-1 rounded-full ${getStatusColor(event.dynamicStatus)}`}>
+                    {event.dynamicStatus === 'UPCOMING' && '🟢 '}
+                    {event.dynamicStatus === 'ONGOING' && '🟡 '}
+                    {event.dynamicStatus === 'COMPLETED' && '⚪ '}
+                    {event.dynamicStatus === 'CANCELLED' && '🔴 '}
+                    {event.dynamicStatus}
+                  </div>
                 </div>
               </div>
               <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-2">
@@ -311,8 +393,25 @@ export function Events() {
             </button>
             
             <div className="p-6 md:p-8">
-              <div className="inline-block bg-brand-50 text-brand-700 font-bold px-3 py-1 rounded-full text-sm mb-4">
-                {selectedEvent.category}
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex gap-2">
+                  <div className="inline-block bg-brand-50 text-brand-700 font-bold px-3 py-1 rounded-full text-sm">
+                    {selectedEvent.category}
+                  </div>
+                  <div className={`text-sm font-bold px-3 py-1 rounded-full ${getStatusColor(selectedEvent.dynamicStatus)}`}>
+                    {selectedEvent.dynamicStatus}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => handleSave(selectedEvent.id, selectedEvent.isSaved)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors ${selectedEvent.isSaved ? 'bg-brand-50 border-brand-200 text-brand-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {selectedEvent.isSaved ? (
+                    <><BookmarkCheck className="w-4 h-4" /> <span className="text-sm font-bold">Saved</span></>
+                  ) : (
+                    <><Bookmark className="w-4 h-4" /> <span className="text-sm font-bold">Save</span></>
+                  )}
+                </button>
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">{selectedEvent.title}</h2>
               
@@ -355,7 +454,10 @@ export function Events() {
 
               <div className="mb-8">
                 <h4 className="font-bold text-gray-900 mb-3 text-lg">Created By</h4>
-                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl inline-flex">
+                <div 
+                  className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl inline-flex cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => navigate(`/users/${selectedEvent.createdById}`)}
+                >
                   <div className="w-10 h-10 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center font-bold">
                     {selectedEvent.creator?.name?.[0] || 'U'}
                   </div>
@@ -366,9 +468,39 @@ export function Events() {
                 </div>
               </div>
 
+              {selectedEvent.participants && selectedEvent.participants.length > 0 && (
+                <div className="mb-8">
+                  <h4 className="font-bold text-gray-900 mb-3 text-lg">Participants ({selectedEvent.participantCount})</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedEvent.participants.map((p: any) => (
+                      <div 
+                        key={p.userId} 
+                        className="flex items-center justify-between p-3 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow cursor-pointer"
+                        onClick={() => navigate(`/users/${p.userId}`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-brand-50 text-brand-600 rounded-full flex items-center justify-center font-bold text-xs">
+                            {p.user?.name?.[0] || 'U'}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-gray-900">{p.user?.name || 'Unknown User'}</p>
+                            <p className="text-xs text-gray-500">{p.user?.city || 'Unknown Location'}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs text-brand-600 font-medium">View</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-gray-100">
-                {selectedEvent.createdById === currentUser?.id ? (
-                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>You are the organizer</Button>
+                {selectedEvent.dynamicStatus === 'CANCELLED' ? (
+                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>This event is cancelled</Button>
+                ) : selectedEvent.dynamicStatus === 'COMPLETED' ? (
+                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>This event has ended</Button>
+                ) : selectedEvent.createdById === currentUser?.id ? (
+                  <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" onClick={() => handleCancel(selectedEvent.id)}>Cancel Event</Button>
                 ) : selectedEvent.hasJoined ? (
                   <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" onClick={() => handleLeave(selectedEvent.id)}>Leave Event</Button>
                 ) : selectedEvent.participantCount >= selectedEvent.maxParticipants ? (

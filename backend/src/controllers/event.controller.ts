@@ -1,6 +1,25 @@
 import { Request, Response } from 'express';
 import { prisma } from '../index';
 
+// Helper to determine event status dynamically
+function getEventStatus(event: any) {
+  if (event.status === 'CANCELLED') return 'CANCELLED';
+  
+  const now = new Date();
+  
+  // Create Date object for event date + end time to check if completed
+  const eventDate = new Date(event.date);
+  eventDate.setHours(0, 0, 0, 0);
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (eventDate < today) return 'COMPLETED';
+  if (eventDate.getTime() === today.getTime()) return 'ONGOING';
+  
+  return 'UPCOMING';
+}
+
 // Haversine formula
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // km
@@ -77,7 +96,7 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
     const userId = req.user?.id;
     
     // Filters
-    const { category, search, date, latitude, longitude, radius } = req.query;
+    const { category, search, date, latitude, longitude, radius, filter } = req.query;
     
     let whereClause: any = {};
     
@@ -93,6 +112,26 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       whereClause.date = { gte: today };
+    }
+
+    if (filter === 'created' && userId) {
+      whereClause.createdById = userId;
+    }
+    if (filter === 'joined' && userId) {
+      whereClause.participants = {
+        some: { userId }
+      };
+    }
+    if (filter === 'mine' && userId) {
+      whereClause.OR = [
+        { createdById: userId },
+        { participants: { some: { userId } } }
+      ];
+    }
+    if (filter === 'saved' && userId) {
+      whereClause.savedBy = {
+        some: { userId }
+      };
     }
 
     // Get blocks involving current user to exclude their events
@@ -118,7 +157,10 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
         },
         participants: {
           select: { userId: true }
-        }
+        },
+        savedBy: userId ? {
+          where: { userId }
+        } : false
       },
       orderBy: { date: 'asc' }
     });
@@ -161,9 +203,15 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
         distance: distance ? parseFloat(distance.toFixed(1)) : null,
         participantCount: event.participants.length,
         hasJoined: userId ? event.participants.some((p: any) => p.userId === userId) : false,
-        recommended
+        isSaved: userId ? event.savedBy && event.savedBy.length > 0 : false,
+        recommended,
+        dynamicStatus: getEventStatus(event)
       };
     });
+
+    if (filter === 'recommended') {
+      formattedEvents = formattedEvents.filter((e: any) => e.recommended);
+    }
 
     // Distance filter
     if (radius) {
@@ -192,10 +240,13 @@ export const getEventById = async (req: Request | any, res: Response): Promise<v
         participants: {
           include: {
             user: {
-              select: { id: true, name: true, avatar: true }
+              select: { id: true, name: true, avatar: true, city: true, locality: true }
             }
           }
-        }
+        },
+        savedBy: userId ? {
+          where: { userId }
+        } : false
       }
     });
 
@@ -228,6 +279,8 @@ export const getEventById = async (req: Request | any, res: Response): Promise<v
         ...safeEvent,
         participantCount: event.participants.length,
         hasJoined: userId ? event.participants.some((p: any) => p.userId === userId) : false,
+        isSaved: userId ? event.savedBy && event.savedBy.length > 0 : false,
+        dynamicStatus: getEventStatus(event)
       }
     });
   } catch (error: any) {
@@ -278,6 +331,15 @@ export const joinEvent = async (req: Request | any, res: Response): Promise<void
       data: {
         eventId: id,
         userId
+      }
+    });
+
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: 'EVENT_JOINED',
+        title: 'Event Joined',
+        message: `You joined ${event.title}.`
       }
     });
 
@@ -376,8 +438,23 @@ export const updateEvent = async (req: Request | any, res: Response): Promise<vo
 
     const updatedEvent = await prisma.event.update({
       where: { id },
-      data: updateData
+      data: updateData,
+      include: { participants: true }
     });
+
+    // Notify participants
+    for (const participant of updatedEvent.participants) {
+      if (participant.userId !== userId) {
+        await prisma.notification.create({
+          data: {
+            userId: participant.userId,
+            type: 'EVENT_UPDATED',
+            title: 'Event Updated',
+            message: `${updatedEvent.title} has been updated.`
+          }
+        });
+      }
+    }
 
     res.json({ success: true, event: updatedEvent });
   } catch (error: any) {
@@ -413,6 +490,84 @@ export const deleteEvent = async (req: Request | any, res: Response): Promise<vo
     res.json({ success: true, message: 'Event deleted successfully' });
   } catch (error: any) {
     console.error('Delete Event Error:', error.message || error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const saveEvent = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
+
+    const { id } = req.params;
+    
+    const existing = await prisma.savedEvent.findUnique({
+      where: { eventId_userId: { eventId: id, userId } }
+    });
+    
+    if (existing) {
+      res.status(400).json({ success: false, message: 'You have already saved this event.' });
+      return;
+    }
+    
+    await prisma.savedEvent.create({
+      data: { eventId: id, userId }
+    });
+    
+    res.json({ success: true, message: 'Event saved successfully' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const unsaveEvent = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
+
+    const { id } = req.params;
+    
+    await prisma.savedEvent.delete({
+      where: { eventId_userId: { eventId: id, userId } }
+    }).catch(() => {});
+    
+    res.json({ success: true, message: 'Event unsaved successfully' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const cancelEvent = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
+
+    const { id } = req.params;
+    const event = await prisma.event.findUnique({ where: { id }, include: { participants: true } });
+    
+    if (!event) { res.status(404).json({ success: false, message: 'Event not found' }); return; }
+    if (event.createdById !== userId) { res.status(403).json({ success: false, message: 'Unauthorized' }); return; }
+    
+    await prisma.event.update({
+      where: { id },
+      data: { status: 'CANCELLED' }
+    });
+    
+    for (const p of event.participants) {
+      if (p.userId !== userId) {
+        await prisma.notification.create({
+          data: {
+            userId: p.userId,
+            type: 'EVENT_CANCELLED',
+            title: 'Event Cancelled',
+            message: `${event.title} has been cancelled.`
+          }
+        });
+      }
+    }
+    
+    res.json({ success: true, message: 'Event cancelled successfully' });
+  } catch (error: any) {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
