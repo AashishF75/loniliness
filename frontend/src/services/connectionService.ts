@@ -70,7 +70,7 @@ export const connectionService = {
       return [];
     } catch (err) {
       console.error('Failed to get connections', err);
-      return [];
+      throw err;
     }
   },
 
@@ -128,6 +128,18 @@ export const connectionService = {
       return { success: true };
     } catch (err) {
       console.error('Failed to update status', err);
+      return { success: false };
+    }
+  },
+
+  async removeConnection(id: string) {
+    try {
+      const data = await fetchApi(`/connections/${id}`, {
+        method: 'DELETE'
+      });
+      return data;
+    } catch (err) {
+      console.error('Failed to remove connection', err);
       return { success: false };
     }
   },

@@ -53,10 +53,27 @@ export const getNearbyUsers = async (req: Request | any, res: Response): Promise
       });
     }
 
-    // Get all other users who have location
+    // Get blocks involving current user
+    const userBlocks = await prisma.block.findMany({
+      where: {
+        OR: [
+          { blockerId: userId },
+          { blockedId: userId }
+        ]
+      }
+    });
+
+    const blockedUserIds = userBlocks.map((b: any) => 
+      b.blockerId === userId ? b.blockedId : b.blockerId
+    );
+
+    // Get all other users who have location and are not blocked
     const otherUsers = await prisma.user.findMany({
       where: {
-        id: { not: userId },
+        id: { 
+          not: userId,
+          notIn: blockedUserIds
+        },
         latitude: { not: null },
         longitude: { not: null },
       },

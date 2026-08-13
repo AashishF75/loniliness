@@ -22,6 +22,21 @@ export const sendConnectionRequest = async (req: Request | any, res: Response): 
       return;
     }
 
+    // Check if there is a block
+    const existingBlock = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: senderId, blockedId: targetUserId },
+          { blockerId: targetUserId, blockedId: senderId }
+        ]
+      }
+    });
+
+    if (existingBlock) {
+      res.status(403).json({ success: false, message: 'Cannot connect with this user' });
+      return;
+    }
+
     const existingConnection = await prisma.connection.findFirst({
       where: {
         OR: [
@@ -213,6 +228,37 @@ export const getOutgoingRequests = async (req: Request | any, res: Response): Pr
     });
     res.json({ success: true, requestedUserIds: requests.map((r: any) => r.connectedId) });
   } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const removeConnection = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const connection = await prisma.connection.findUnique({ where: { id } });
+
+    if (!connection) {
+      res.status(404).json({ success: false, message: 'Connection not found' });
+      return;
+    }
+
+    if (connection.userId !== userId && connection.connectedId !== userId) {
+      res.status(403).json({ success: false, message: 'Not authorized to modify this connection' });
+      return;
+    }
+
+    await prisma.connection.delete({ where: { id } });
+
+    res.json({ success: true, message: 'Connection removed' });
+  } catch (error: any) {
+    console.error('Remove connection error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

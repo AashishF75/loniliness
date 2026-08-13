@@ -26,6 +26,21 @@ export const sendMessage = async (req: Request | any, res: Response): Promise<vo
       return;
     }
 
+    // Check for block
+    const block = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: senderId, blockedId: receiverId },
+          { blockerId: receiverId, blockedId: senderId }
+        ]
+      }
+    });
+
+    if (block) {
+      res.status(403).json({ success: false, message: 'Cannot message this user' });
+      return;
+    }
+
     // Verify they are accepted connections
     const connection = await prisma.connection.findFirst({
       where: {
@@ -77,6 +92,21 @@ export const getConversation = async (req: Request | any, res: Response): Promis
 
     if (!currentUserId || !otherUserId) {
       res.status(400).json({ success: false, message: 'Missing user IDs' });
+      return;
+    }
+
+    // Check for block
+    const block = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: currentUserId, blockedId: otherUserId },
+          { blockerId: otherUserId, blockedId: currentUserId }
+        ]
+      }
+    });
+
+    if (block) {
+      res.status(403).json({ success: false, message: 'Cannot view conversation with this user' });
       return;
     }
 

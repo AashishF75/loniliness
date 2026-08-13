@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { userService } from '../services/userService';
 import { connectionService } from '../services/connectionService';
+import { safetyService } from '../services/safetyService';
 
 export function PublicProfile() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,11 @@ export function PublicProfile() {
   const [isSending, setIsSending] = useState(false);
   const [userInterests, setUserInterests] = useState<string[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
+  
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('Harassment');
+  const [reportDescription, setReportDescription] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,6 +69,34 @@ export function PublicProfile() {
     if (result.success) {
       setIsConnected(true);
       setConnectionStatus('PENDING');
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!profile) return;
+    if (window.confirm(`Are you sure you want to block ${profile.name}? They will no longer be able to message you or see your profile.`)) {
+      try {
+        await safetyService.blockUser(profile.id);
+        alert(`${profile.name} has been blocked.`);
+        navigate('/app/people'); // Go back to people list after blocking
+      } catch (err) {
+        alert('Failed to block user.');
+      }
+    }
+  };
+
+  const handleReportSubmit = async () => {
+    if (!profile) return;
+    setIsReporting(true);
+    try {
+      await safetyService.reportUser(profile.id, reportReason, reportDescription);
+      alert('Report submitted successfully. Thank you.');
+      setShowReportModal(false);
+      setReportDescription('');
+    } catch (err) {
+      alert('Failed to submit report.');
+    } finally {
+      setIsReporting(false);
     }
   };
 
@@ -143,6 +177,21 @@ export function PublicProfile() {
               >
                 {isSending ? 'Sending...' : connectionStatus === 'CONNECTED' ? 'Connected' : connectionStatus === 'PENDING' ? 'Request Sent' : 'Connect'}
               </Button>
+              <div className="flex gap-4 mt-2 justify-center md:justify-start">
+                <button 
+                  onClick={() => setShowReportModal(true)}
+                  className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors underline"
+                >
+                  Report User
+                </button>
+                <span className="text-gray-300">|</span>
+                <button 
+                  onClick={handleBlock}
+                  className="text-sm font-medium text-red-500 hover:text-red-700 transition-colors underline"
+                >
+                  Block User
+                </button>
+              </div>
             </div>
           </div>
 
@@ -221,6 +270,48 @@ export function PublicProfile() {
           </div>
         </div>
       </Card>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="bg-white w-full max-w-md p-6 flex flex-col gap-4">
+            <h2 className="text-2xl font-bold text-gray-900">Report {profile?.name}</h2>
+            <p className="text-gray-600">Please let us know why you are reporting this user. We will review this report and take appropriate action.</p>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+              <select 
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              >
+                <option value="Harassment">Harassment or Bullying</option>
+                <option value="Spam">Spam</option>
+                <option value="Fake Profile">Fake Profile</option>
+                <option value="Inappropriate Content">Inappropriate Content</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Details (Optional)</label>
+              <textarea 
+                value={reportDescription} 
+                onChange={e => setReportDescription(e.target.value)}
+                placeholder="Provide additional details..."
+                className="flex w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 min-h-[100px]"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setShowReportModal(false)}>Cancel</Button>
+              <Button onClick={handleReportSubmit} disabled={isReporting} className="bg-red-600 hover:bg-red-700 text-white border-red-600">
+                {isReporting ? 'Submitting...' : 'Submit Report'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

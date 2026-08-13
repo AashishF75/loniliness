@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar } from 'lucide-react';
+import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar, Link2 } from 'lucide-react';
 import { notificationService } from '../../services/notificationService';
 import { connectionService } from '../../services/connectionService';
 
@@ -82,6 +82,7 @@ export function RootLayout() {
   const navItems = [
     { path: '/dashboard', label: 'Home', icon: Home },
     { path: '/people', label: 'People', icon: Users },
+    { path: '/connections', label: 'Connections', icon: Link2 },
     { path: '/activities', label: 'Events', icon: Calendar },
     { path: '/ai-companion', label: 'Saathi', icon: MessageCircle },
     { path: '/family', label: 'Family', icon: Heart },

@@ -53,6 +53,14 @@ model User {
 
   reminders     Reminder[]
   emergencies   EmergencyAlert[]
+
+  // Blocks
+  blockedUsers  Block[] @relation("Blocker")
+  blockedBy     Block[] @relation("Blocked")
+
+  // Reports
+  reportsSubmitted Report[] @relation("Reporter")
+  reportsReceived  Report[] @relation("ReportedUser")
 }
 
 model Hobby {
@@ -132,4 +140,28 @@ model EmergencyAlert {
   longitude   Float?
   status      String   @default("ACTIVE") // ACTIVE, RESOLVED
   createdAt   DateTime @default(now())
+}
+
+model Block {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  blockerId   String   @db.ObjectId
+  blocker     User     @relation("Blocker", fields: [blockerId], references: [id])
+  blockedId   String   @db.ObjectId
+  blocked     User     @relation("Blocked", fields: [blockedId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+model Report {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  reporterId      String   @db.ObjectId
+  reporter        User     @relation("Reporter", fields: [reporterId], references: [id])
+  reportedUserId  String   @db.ObjectId
+  reportedUser    User     @relation("ReportedUser", fields: [reportedUserId], references: [id])
+  reason          String
+  description     String?
+  status          String   @default("PENDING") // PENDING, REVIEWED, RESOLVED, DISMISSED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

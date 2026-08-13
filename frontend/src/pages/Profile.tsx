@@ -4,6 +4,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
+import { safetyService } from '../services/safetyService';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
 
@@ -13,9 +14,12 @@ export function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [showBlockedUsers, setShowBlockedUsers] = useState(false);
 
   useEffect(() => {
     userService.getUser().then(data => setUser(data));
+    safetyService.getBlockedUsers().then(data => setBlockedUsers(data));
   }, []);
 
   const handleLogout = () => {
@@ -51,6 +55,16 @@ export function Profile() {
       setIsEditing(false);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUnblock = async (userId: string) => {
+    try {
+      await safetyService.unblockUser(userId);
+      setBlockedUsers(blockedUsers.filter(b => b.blocked.id !== userId));
+      alert('User unblocked successfully.');
+    } catch (err) {
+      alert('Failed to unblock user.');
     }
   };
 
@@ -115,6 +129,9 @@ export function Profile() {
             <Button variant="outline" className="justify-start h-16 text-xl bg-gray-50 border-gray-200 hover:bg-gray-100">
               <ShieldAlert className="w-6 h-6 mr-4 text-gray-600" /> Privacy & Safety
             </Button>
+            <Button variant="outline" className="justify-start h-16 text-xl bg-gray-50 border-gray-200 hover:bg-gray-100" onClick={() => setShowBlockedUsers(true)}>
+              <User className="w-6 h-6 mr-4 text-gray-600" /> Blocked Users ({blockedUsers.length})
+            </Button>
           </div>
         </Card>
       </div>
@@ -172,6 +189,40 @@ export function Profile() {
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? 'Saving...' : <><Save className="w-5 h-5 mr-2" /> Save Changes</>}
               </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Blocked Users Modal */}
+      {showBlockedUsers && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 flex flex-col gap-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Blocked Users</h2>
+              <Button variant="outline" size="sm" onClick={() => setShowBlockedUsers(false)}>
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              {blockedUsers.length === 0 ? (
+                <p className="text-gray-500 text-lg">You have no blocked users.</p>
+              ) : (
+                blockedUsers.map(block => (
+                  <div key={block.id} className="flex justify-between items-center border border-gray-200 p-4 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-brand-600" />
+                      </div>
+                      <span className="text-lg font-semibold">{block.blocked.name}</span>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handleUnblock(block.blocked.id)}>
+                      Unblock
+                    </Button>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
         </div>

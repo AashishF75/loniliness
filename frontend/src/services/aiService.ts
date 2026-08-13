@@ -6,9 +6,20 @@ import { activityService } from './activityService';
 export const aiService = {
   async sendMessage(text: string) {
     try {
-      const user = await userService.getUser();
-      const nearbyPeople = await connectionService.getNearbyPeople();
-      const activities = await activityService.getActivities();
+      let user = null;
+      try {
+        user = await userService.getUser();
+      } catch (e) { console.warn('Failed to get user for AI context'); }
+
+      let nearbyPeople = [];
+      try {
+        nearbyPeople = await connectionService.getNearbyPeople();
+      } catch (e) { console.warn('Failed to get nearby people for AI context'); }
+
+      let activities = [];
+      try {
+        activities = await activityService.getActivities();
+      } catch (e) { console.warn('Failed to get activities for AI context'); }
 
       const response = await fetchApi('/ai/recommend', {
         method: 'POST',

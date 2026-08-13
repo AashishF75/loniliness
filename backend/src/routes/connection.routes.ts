@@ -5,7 +5,8 @@ import {
   getIncomingRequests,
   updateConnectionStatus,
   getConnections,
-  getOutgoingRequests
+  getOutgoingRequests,
+  removeConnection
 } from '../controllers/connection.controller';
 
 const router = express.Router();
@@ -24,5 +25,6 @@ router.patch('/:id/reject', protect, (req, res) => {
   req.body.status = 'REJECTED';
   updateConnectionStatus(req, res);
 });
+router.delete('/:id', protect, removeConnection);
 
 export default router;
