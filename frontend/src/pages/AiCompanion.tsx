@@ -164,12 +164,12 @@ export function AiCompanion() {
       {/* Input Area */}
       <div className="bg-white p-4 md:p-6 border-t border-gray-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         {/* Scrollable Suggestion Pills */}
-        <div className="flex gap-3 overflow-x-auto pb-4 hide-scrollbar -mx-2 px-2">
+        <div className="flex flex-wrap gap-2 pb-4">
           {SUGGESTIONS.map((suggestion, i) => (
             <button
               key={i}
               onClick={() => handleSend(suggestion)}
-              className="shrink-0 bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 px-6 py-3 rounded-full text-lg font-bold transition-colors whitespace-nowrap shadow-sm"
+              className="bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 px-4 py-2 rounded-full text-sm sm:text-lg font-bold transition-colors shadow-sm"
             >
               {suggestion}
             </button>

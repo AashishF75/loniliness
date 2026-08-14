@@ -59,7 +59,7 @@ export function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="pl-16 h-18 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
+                className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
               />
             </div>
           </div>
@@ -73,7 +73,7 @@ export function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
-                className="pl-16 pr-20 h-18 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
+                className="pl-16 pr-20 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
               />
               <button
                 type="button"
@@ -85,7 +85,7 @@ export function Login() {
             </div>
           </div>
 
-          <Button type="submit" size="lg" className="h-18 text-2xl font-bold shadow-md w-full mt-4" disabled={loading}>
+          <Button type="submit" size="lg" className="h-16 sm:h-[72px] text-xl sm:text-2xl font-bold shadow-md w-full mt-4" disabled={loading}>
             {loading ? 'Logging in...' : (
               <span className="flex items-center justify-center">
                 Log In <ArrowRight className="w-7 h-7 ml-3" />

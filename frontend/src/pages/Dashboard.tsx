@@ -57,8 +57,8 @@ export function Dashboard() {
               mood === 'Good' ? 'bg-white border-brand-500 shadow-md scale-105' : 'bg-white border-transparent hover:border-brand-200'
             }`}
           >
-            <span className="text-5xl md:text-6xl mb-3">😊</span>
-            <span className="text-xl font-bold text-gray-700">Good</span>
+            <span className="text-4xl md:text-6xl mb-3">😊</span>
+            <span className="text-base md:text-xl font-bold text-gray-700">Good</span>
           </button>
           
           <button
@@ -67,8 +67,8 @@ export function Dashboard() {
               mood === 'Okay' ? 'bg-white border-yellow-500 shadow-md scale-105' : 'bg-white border-transparent hover:border-yellow-200'
             }`}
           >
-            <span className="text-5xl md:text-6xl mb-3">😐</span>
-            <span className="text-xl font-bold text-gray-700">Okay</span>
+            <span className="text-4xl md:text-6xl mb-3">😐</span>
+            <span className="text-base md:text-xl font-bold text-gray-700">Okay</span>
           </button>
 
           <button
@@ -77,8 +77,8 @@ export function Dashboard() {
               mood === 'Lonely' ? 'bg-white border-blue-500 shadow-md scale-105' : 'bg-white border-transparent hover:border-blue-200'
             }`}
           >
-            <span className="text-5xl md:text-6xl mb-3">😔</span>
-            <span className="text-xl font-bold text-gray-700">Lonely</span>
+            <span className="text-4xl md:text-6xl mb-3">😔</span>
+            <span className="text-base md:text-xl font-bold text-gray-700">Lonely</span>
           </button>
         </div>
 
@@ -103,14 +103,14 @@ export function Dashboard() {
           onClick={() => navigate('/ai-companion')}
         >
           <div className="flex items-center justify-between">
-            <div className="pr-4">
-              <h2 className="text-3xl font-extrabold mb-3 flex items-center gap-3">
-                <Sparkles className="w-8 h-8 text-brand-200" />
+            <div className="pr-2 sm:pr-4">
+              <h2 className="text-2xl sm:text-3xl font-extrabold mb-2 sm:mb-3 flex items-center gap-2 sm:gap-3">
+                <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-brand-200" />
                 Ask Saathi
               </h2>
-              <p className="text-brand-100 text-xl leading-relaxed">Your personal AI companion is ready to chat or answer questions.</p>
+              <p className="text-brand-100 text-lg sm:text-xl leading-relaxed">Your personal AI companion is ready to chat or answer questions.</p>
             </div>
-            <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center shrink-0 shadow-inner">
+            <div className="hidden sm:flex w-20 h-20 bg-white/20 rounded-3xl items-center justify-center shrink-0 shadow-inner">
               <MessageCircle className="w-10 h-10 text-white" />
             </div>
           </div>

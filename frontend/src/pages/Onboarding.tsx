@@ -102,7 +102,7 @@ export function Onboarding() {
                     value={data.city}
                     onChange={e => setData({...data, city: e.target.value})}
                     placeholder="Enter your city" 
-                    className="pl-16 h-18 text-xl rounded-2xl bg-gray-50"
+                    className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50"
                   />
                 </div>
               </div>
@@ -115,7 +115,7 @@ export function Onboarding() {
                     value={data.area}
                     onChange={e => setData({...data, area: e.target.value})}
                     placeholder="Enter your area" 
-                    className="pl-16 h-18 text-xl rounded-2xl bg-gray-50"
+                    className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50"
                   />
                 </div>
               </div>
@@ -146,7 +146,7 @@ export function Onboarding() {
                   <button
                     key={interest}
                     onClick={() => toggleInterest(interest)}
-                    className={`px-6 py-4 rounded-2xl text-xl font-bold transition-all border-4 ${
+                    className={`px-4 sm:px-6 py-3 sm:py-4 rounded-2xl text-lg sm:text-xl font-bold transition-all border-4 ${
                       isSelected 
                         ? 'bg-brand-600 text-white border-brand-700 shadow-md scale-105' 
                         : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-brand-300'
@@ -225,7 +225,7 @@ export function Onboarding() {
               <Shield className="w-12 h-12" />
             </div>
             
-            <p className="text-2xl font-medium text-gray-800 leading-relaxed max-w-lg">
+            <p className="text-lg sm:text-2xl font-medium text-gray-800 leading-relaxed max-w-lg">
               Allow Saathi to share my activity updates with my family members for safety and peace of mind.
             </p>
 
@@ -235,7 +235,7 @@ export function Onboarding() {
               }`}>
                 {data.familyConsent && <Check className="w-6 h-6" />}
               </div>
-              <span className="text-2xl font-bold text-brand-900">I Agree to Share</span>
+              <span className="text-xl sm:text-2xl font-bold text-brand-900">I Agree to Share</span>
               <input 
                 type="checkbox" 
                 className="hidden"

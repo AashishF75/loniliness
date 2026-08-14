@@ -134,7 +134,7 @@ export function Register() {
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                 placeholder="Enter your full name"
-                className="pl-16 h-16 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
+                className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
               />
             </div>
           </div>
@@ -148,7 +148,7 @@ export function Register() {
                 value={formData.age}
                 onChange={(e) => setFormData({...formData, age: e.target.value})}
                 placeholder="Enter your age"
-                className="pl-16 h-16 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
+                className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
               />
             </div>
           </div>
@@ -163,7 +163,7 @@ export function Register() {
                   value={formData.location}
                   onChange={(e) => setFormData({...formData, location: e.target.value})}
                   placeholder="e.g. Delhi"
-                  className="pl-16 h-16 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200 w-full"
+                  className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200 w-full"
                 />
               </div>
               <Button type="button" variant="outline" onClick={handleDetectLocation} disabled={detecting} className="h-16 px-6 text-lg font-bold border-2 shrink-0">
@@ -186,7 +186,7 @@ export function Register() {
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 placeholder="Enter your email"
-                className="pl-16 h-16 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
+                className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
               />
             </div>
           </div>
@@ -200,7 +200,7 @@ export function Register() {
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 placeholder="Create a password"
-                className="pl-16 pr-20 h-16 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
+                className="pl-16 pr-20 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
               />
               <button
                 type="button"
@@ -212,7 +212,7 @@ export function Register() {
             </div>
           </div>
 
-          <Button type="submit" size="lg" className="h-18 text-2xl font-bold shadow-md w-full mt-4" disabled={loading}>
+          <Button type="submit" size="lg" className="h-16 sm:h-[72px] text-xl sm:text-2xl font-bold shadow-md w-full mt-4" disabled={loading}>
             {loading ? 'Creating Account...' : (
               <span className="flex items-center justify-center">
                 Register <ArrowRight className="w-7 h-7 ml-3" />

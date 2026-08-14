@@ -92,7 +92,7 @@ export function Profile() {
         </div>
         <div className="flex-1 text-center md:text-left flex flex-col gap-2 w-full">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 className="text-4xl font-extrabold text-gray-900">{user.name}</h1>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 break-words">{user.name}</h1>
             <Button variant="outline" className="border-gray-200" onClick={handleEditClick}>
               <Edit3 className="w-5 h-5 mr-2" /> Edit Profile
             </Button>
@@ -125,14 +125,14 @@ export function Profile() {
             Settings
           </h2>
           <div className="flex flex-col gap-4">
-            <Button variant="outline" className="justify-start h-16 text-xl bg-gray-50 border-gray-200 hover:bg-gray-100">
-              <Bell className="w-6 h-6 mr-4 text-gray-600" /> Notifications
+            <Button variant="outline" className="justify-start h-16 text-base sm:text-xl bg-gray-50 border-gray-200 hover:bg-gray-100 min-w-0">
+              <Bell className="w-5 h-5 sm:w-6 sm:h-6 mr-3 sm:mr-4 text-gray-600 shrink-0" /> <span className="truncate">Notifications</span>
             </Button>
-            <Button variant="outline" className="justify-start h-16 text-xl bg-gray-50 border-gray-200 hover:bg-gray-100">
-              <ShieldAlert className="w-6 h-6 mr-4 text-gray-600" /> Privacy & Safety
+            <Button variant="outline" className="justify-start h-16 text-base sm:text-xl bg-gray-50 border-gray-200 hover:bg-gray-100 min-w-0">
+              <ShieldAlert className="w-5 h-5 sm:w-6 sm:h-6 mr-3 sm:mr-4 text-gray-600 shrink-0" /> <span className="truncate">Privacy & Safety</span>
             </Button>
-            <Button variant="outline" className="justify-start h-16 text-xl bg-gray-50 border-gray-200 hover:bg-gray-100" onClick={() => setShowBlockedUsers(true)}>
-              <User className="w-6 h-6 mr-4 text-gray-600" /> Blocked Users ({blockedUsers.length})
+            <Button variant="outline" className="justify-start h-16 text-base sm:text-xl bg-gray-50 border-gray-200 hover:bg-gray-100 min-w-0" onClick={() => setShowBlockedUsers(true)}>
+              <User className="w-5 h-5 sm:w-6 sm:h-6 mr-3 sm:mr-4 text-gray-600 shrink-0" /> <span className="truncate">Blocked Users ({blockedUsers.length})</span>
             </Button>
           </div>
         </Card>

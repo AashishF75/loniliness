@@ -229,7 +229,7 @@ export function RootLayout() {
 
       {!hideNav && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 pb-safe md:relative md:border-t-0 md:bg-transparent md:p-0 z-50">
-          <div className="w-full flex justify-between items-center h-16 md:hidden overflow-x-auto hide-scrollbar px-1 gap-1">
+          <div className="w-full flex justify-between items-center h-16 md:hidden px-0 sm:px-1 gap-0 sm:gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname.startsWith(item.path);
@@ -237,12 +237,12 @@ export function RootLayout() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex flex-col items-center justify-center flex-1 min-w-[60px] h-full gap-1 rounded-xl transition-colors ${
+                  className={`flex flex-col items-center justify-center flex-1 min-w-0 h-full gap-0.5 sm:gap-1 rounded-xl transition-colors ${
                     isActive ? 'text-brand-600 bg-brand-50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
-                  <Icon className={`w-6 h-6 sm:w-7 sm:h-7 ${isActive ? 'fill-brand-100' : ''}`} />
-                  <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight truncate w-full px-1">{item.label}</span>
+                  <Icon className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ${isActive ? 'fill-brand-100' : ''}`} />
+                  <span className="text-[9px] sm:text-[10px] md:text-[11px] font-bold text-center leading-tight truncate w-full px-0.5">{item.label}</span>
                 </Link>
               );
             })}

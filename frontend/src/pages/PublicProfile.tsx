@@ -152,15 +152,15 @@ export function PublicProfile() {
             </div>
             
             <div className="flex-1 text-center md:text-left pb-2">
-              <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight break-words">
                 {profile.name}
               </h1>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3">
-                <span className="text-xl font-medium text-gray-600 flex items-center gap-1">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-4 mt-3">
+                <span className="text-base sm:text-xl font-medium text-gray-600 flex items-center gap-1">
                   Age {profile.age || 'N/A'}
                 </span>
                 <span className="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>
-                <span className="text-xl font-medium text-gray-600 flex items-center gap-1">
+                <span className="text-base sm:text-xl font-medium text-gray-600 flex items-center gap-1">
                   <MapPin className="w-5 h-5" />
                   {profile.locality ? `${profile.locality}, ${profile.city}` : profile.city || 'Location not set'}
                 </span>

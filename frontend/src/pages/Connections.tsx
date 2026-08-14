@@ -271,8 +271,8 @@ export function Connections() {
 
 
       <section>
-        <h2 className="text-3xl font-bold text-gray-900 mb-6 px-2 flex items-center gap-3">
-           <span className="bg-green-100 text-green-700 w-10 h-10 rounded-xl flex items-center justify-center">{connected.length}</span>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 px-2 flex items-center gap-2 sm:gap-3">
+           <span className="bg-green-100 text-green-700 w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-xl sm:text-2xl">{connected.length}</span>
             My Connections
         </h2>
         <div className="flex flex-col gap-4">
@@ -306,9 +306,9 @@ export function Connections() {
                 </div>
               </div>
               <div className="flex flex-col gap-2 w-full md:w-auto mt-4 md:mt-0 items-center md:items-end">
-                <div className="flex gap-2 w-full">
-                  <Button variant="outline" size="lg" className="flex-1 h-12 text-lg" onClick={() => window.location.href=`/users/${conn.userId}`}>View Profile</Button>
-                  <Button size="lg" className="flex-1 h-12 shadow-md text-lg" onClick={() => setActiveChatId(conn.id)}><MessageCircle className="w-5 h-5 mr-2" /> Chat</Button>
+                <div className="flex flex-col sm:flex-row gap-2 w-full">
+                  <Button variant="outline" size="lg" className="flex-1 h-12 text-base sm:text-lg" onClick={() => window.location.href=`/users/${conn.userId}`}>View Profile</Button>
+                  <Button size="lg" className="flex-1 h-12 shadow-md text-base sm:text-lg" onClick={() => setActiveChatId(conn.id)}><MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" /> Chat</Button>
                 </div>
                 <div className="flex gap-3 text-sm mt-1 justify-center md:justify-end">
                   <button onClick={() => handleRemoveConnection(conn.id, conn.name)} className="text-gray-500 hover:text-gray-800 underline">Remove</button>

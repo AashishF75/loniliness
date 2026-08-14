@@ -56,21 +56,21 @@ export function Activities() {
         
         <div className="flex-1 flex flex-col gap-4">
           <div>
-            <h3 className="text-3xl font-extrabold text-gray-900 mb-2">{activity.name}</h3>
-            <p className="text-xl text-gray-600 leading-relaxed">{activity.description}</p>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">{activity.name}</h3>
+            <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">{activity.description}</p>
           </div>
           
-          <div className="flex flex-wrap gap-4 mt-2">
-            <div className="flex items-center gap-2 text-lg font-bold text-gray-800 bg-gray-100 px-5 py-2.5 rounded-2xl border border-gray-200">
-              <CalendarIcon className="w-6 h-6 text-brand-600" />
+          <div className="flex flex-wrap gap-2 sm:gap-4 mt-2">
+            <div className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-800 bg-gray-100 px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl border border-gray-200">
+              <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
               {activity.date} at {activity.time}
             </div>
-            <div className="flex items-center gap-2 text-lg font-bold text-gray-800 bg-gray-100 px-5 py-2.5 rounded-2xl border border-gray-200">
-              <MapPin className="w-6 h-6 text-brand-600" />
+            <div className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-800 bg-gray-100 px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl border border-gray-200">
+              <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
               {activity.location} ({activity.distance} km)
             </div>
-            <div className="flex items-center gap-2 text-lg font-extrabold text-brand-900 bg-brand-100 px-5 py-2.5 rounded-2xl border border-brand-200 shadow-sm">
-              <Users className="w-6 h-6 text-brand-700" />
+            <div className="flex items-center gap-2 text-base sm:text-lg font-extrabold text-brand-900 bg-brand-100 px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl border border-brand-200 shadow-sm">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-brand-700" />
               {activity.participants} Participants
             </div>
           </div>
@@ -79,7 +79,7 @@ export function Activities() {
         <div className="flex items-center shrink-0 w-full lg:w-auto mt-4 lg:mt-0">
           <Button 
             size="lg" 
-            className={`w-full lg:w-48 h-16 text-2xl font-bold transition-all ${
+            className={`w-full lg:w-48 h-16 text-xl sm:text-2xl font-bold transition-all ${
               isJoined 
                 ? 'bg-green-100 text-green-800 border-2 border-green-400 opacity-100 shadow-none' 
                 : 'bg-brand-600 hover:bg-brand-700 shadow-md'
@@ -110,9 +110,9 @@ export function Activities() {
 
       <div className="flex flex-col gap-10">
         <section>
-          <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-            <span className="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center">
-              <CalendarIcon className="w-6 h-6" />
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-2 sm:gap-3">
+            <span className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center shrink-0">
+              <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </span>
             Today's Activities
           </h2>
@@ -128,9 +128,9 @@ export function Activities() {
         </section>
 
         <section>
-          <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3 mt-4">
-            <span className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-              <CalendarIcon className="w-6 h-6" />
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center gap-2 sm:gap-3 mt-4">
+            <span className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+              <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </span>
             Upcoming Activities
           </h2>

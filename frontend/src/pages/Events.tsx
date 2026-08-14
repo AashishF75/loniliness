@@ -279,15 +279,15 @@ export function Events() {
       </div>
 
       <Card className="bg-white border-b border-gray-100 rounded-none shadow-sm -mx-4 px-4 sm:mx-0 sm:px-0 sm:rounded-xl mb-6">
-        <div className="flex overflow-x-auto hide-scrollbar">
+        <div className="grid grid-cols-2 sm:flex sm:overflow-x-auto hide-scrollbar gap-1 sm:gap-0 p-2 sm:p-0">
           {['upcoming', 'recommended', 'saved', 'mine'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 sm:px-6 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+              className={`px-2 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold whitespace-nowrap border rounded-xl sm:border-0 sm:border-b-2 sm:rounded-none transition-colors ${
                 activeTab === tab
-                  ? 'border-brand-500 text-brand-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-brand-500 bg-brand-50 text-brand-600 sm:bg-transparent'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 bg-gray-50 sm:bg-transparent hover:bg-gray-100 sm:hover:bg-transparent'
               }`}
             >
               {tab === 'upcoming' && '📅 Upcoming Events'}
@@ -311,11 +311,11 @@ export function Events() {
           <Button type="submit" variant="outline">Search</Button>
         </form>
         
-        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 pb-1 sm:pb-0 w-full">
           <select 
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 min-w-[120px]"
+            className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 w-full sm:w-auto min-w-0 sm:min-w-[120px]"
           >
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -323,7 +323,7 @@ export function Events() {
           <select 
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 min-w-[120px]"
+            className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 w-full sm:w-auto min-w-0 sm:min-w-[120px]"
           >
             <option value="All">All Dates</option>
             <option value="Upcoming">Upcoming</option>
@@ -332,7 +332,7 @@ export function Events() {
           <select 
             value={radiusFilter}
             onChange={(e) => setRadiusFilter(e.target.value)}
-            className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 min-w-[120px]"
+            className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 w-full sm:w-auto min-w-0 sm:min-w-[120px]"
           >
             <option value="All">Any Distance</option>
             <option value="5">Within 5 km</option>
@@ -343,7 +343,7 @@ export function Events() {
           <select 
             value={sortFilter}
             onChange={(e) => setSortFilter(e.target.value)}
-            className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 min-w-[140px]"
+            className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 w-full sm:w-auto min-w-0 sm:min-w-[140px]"
           >
             <option value="soonest">Soonest</option>
             <option value="recommended">Recommended</option>

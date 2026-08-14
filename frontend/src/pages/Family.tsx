@@ -64,8 +64,8 @@ export function Family() {
             {isShared ? <Shield className="w-8 h-8" /> : <ShieldAlert className="w-8 h-8" />}
           </div>
           <div>
-            <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Activity Sharing</h2>
-            <p className={`text-xl font-bold ${isShared ? 'text-brand-700' : 'text-gray-500'}`}>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Activity Sharing</h2>
+            <p className={`text-base sm:text-xl font-bold ${isShared ? 'text-brand-700' : 'text-gray-500'}`}>
               {isShared ? "Your family can see your activity updates." : "Your activity is private."}
             </p>
           </div>
@@ -120,8 +120,8 @@ export function Family() {
             </div>
             <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex items-center justify-between">
               <div>
-                <p className="text-2xl font-extrabold text-gray-900 mb-1">Connected with 2 people</p>
-                <p className="text-xl text-gray-600 font-medium">Suresh and Ravi</p>
+                <p className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Connected with 2 people</p>
+                <p className="text-lg sm:text-xl text-gray-600 font-medium">Suresh and Ravi</p>
               </div>
             </div>
           </Card>
