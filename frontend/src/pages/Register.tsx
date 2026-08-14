@@ -21,26 +21,66 @@ export function Register() {
   const [error, setError] = useState('');
   const [locationMessage, setLocationMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [detecting, setDetecting] = useState(false);
 
   const handleDetectLocation = () => {
+    if (detecting) return;
     if (!navigator.geolocation) {
       setLocationMessage('Geolocation is not supported by your browser.');
       return;
     }
-    setLocationMessage('Detecting location...');
+    setDetecting(true);
+    setLocationMessage('Detecting...');
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setFormData({
-          ...formData,
-          latitude: position.coords.latitude.toString(),
-          longitude: position.coords.longitude.toString()
-        });
-        setLocationMessage('Location detected successfully!');
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        
+        let detectedLocationName = '';
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
+            headers: { 'Accept-Language': 'en' }
+          });
+          const data = await response.json();
+          if (data && data.address) {
+            const city = data.address.city || data.address.town || data.address.village || data.address.county || data.address.state_district;
+            const state = data.address.state;
+            if (city && state) {
+              detectedLocationName = `${city}, ${state}`;
+            } else if (city) {
+              detectedLocationName = city;
+            } else if (state) {
+              detectedLocationName = state;
+            }
+          }
+        } catch (err) {
+          console.warn('Reverse geocoding failed:', err);
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat.toString(),
+          longitude: lon.toString(),
+          ...(detectedLocationName ? { location: detectedLocationName } : {})
+        }));
+
+        if (detectedLocationName) {
+          setLocationMessage('Location detected successfully!');
+        } else {
+          setLocationMessage('Location detected, but we couldn\'t determine the city. Please enter it manually.');
+        }
+        setDetecting(false);
       },
       (error) => {
         console.warn(error);
-        setLocationMessage('Location access is needed to find people near you.');
-      }
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationMessage('Location permission denied. Please enter your location manually.');
+        } else {
+          setLocationMessage('Location access failed. Please enter your location manually.');
+        }
+        setDetecting(false);
+      },
+      { timeout: 10000 }
     );
   };
 
@@ -126,8 +166,8 @@ export function Register() {
                   className="pl-16 h-16 text-xl rounded-2xl bg-gray-50 border-2 border-gray-200 w-full"
                 />
               </div>
-              <Button type="button" variant="outline" onClick={handleDetectLocation} className="h-16 px-6 text-lg font-bold border-2 shrink-0">
-                Detect Location
+              <Button type="button" variant="outline" onClick={handleDetectLocation} disabled={detecting} className="h-16 px-6 text-lg font-bold border-2 shrink-0">
+                {detecting ? 'Detecting...' : 'Detect Location'}
               </Button>
             </div>
             {locationMessage && (
