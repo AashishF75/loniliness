@@ -150,7 +150,7 @@ export function RootLayout() {
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute right-[-1rem] sm:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 md:w-96 bg-white border border-gray-200 shadow-xl rounded-2xl overflow-hidden z-[100] flex flex-col max-h-[80vh] max-w-full">
+                  <div className="fixed top-20 left-4 right-4 sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:mt-2 w-auto sm:w-80 md:w-96 bg-white border border-gray-200 shadow-xl rounded-2xl overflow-hidden z-[100] flex flex-col max-h-[70vh] sm:max-h-[80vh]">
                     <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
                       <h3 className="font-bold text-lg text-gray-800">Notifications</h3>
                       {unreadCount > 0 && (

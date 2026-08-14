@@ -12,6 +12,7 @@ export function Connections() {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -97,21 +98,60 @@ export function Connections() {
   const [fetchedChats, setFetchedChats] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    let pollInterval: any;
+
     if (activeChatId) {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const conn = connected.find((c: any) => c.id === activeChatId);
+      const targetUserId = conn?.userId;
       
-      const activeConn = connected.find((c: any) => c.id === activeChatId);
-      if (activeConn && !fetchedChats[activeChatId]) {
+      if (!targetUserId) return;
+
+      const fetchChat = async () => {
+        try {
+          const newMessages = await connectionService.getConversation(targetUserId);
+          
+          setConnected(prev => {
+            const currentConn = prev.find(c => c.id === activeChatId);
+            if (!currentConn) return prev;
+            
+            const oldLen = currentConn.messages?.length || 0;
+            const newLen = newMessages.length;
+            
+            if (newLen === oldLen) return prev;
+
+            let isNearBottom = true;
+            if (scrollContainerRef.current) {
+              const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+              isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+            }
+
+            if (isNearBottom) {
+              setTimeout(() => {
+                chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }, 100);
+            }
+
+            return prev.map(c => c.id === activeChatId ? { ...c, messages: newMessages } : c);
+          });
+        } catch (err) {
+          console.warn('Chat polling error:', err);
+        }
+      };
+
+      fetchChat();
+      
+      if (!fetchedChats[activeChatId]) {
         setFetchedChats(prev => ({ ...prev, [activeChatId]: true }));
-        connectionService.getConversation(activeConn.userId).then(messages => {
-          setConnected(prev => prev.map(c => {
-            if (c.id === activeChatId) return { ...c, messages };
-            return c;
-          }));
-        });
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 200);
       }
+
+      pollInterval = setInterval(fetchChat, 2500);
     }
-  }, [activeChatId, connected, fetchedChats]);
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [activeChatId]);
 
   useEffect(() => {
     fetchConnections();
@@ -159,6 +199,7 @@ export function Connections() {
         return c;
       });
       setConnected(updated);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     }
     setMessageInput('');
   };
@@ -183,7 +224,7 @@ export function Connections() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6 bg-slate-50/50">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6 bg-slate-50/50">
           {(!activeConnection.messages || activeConnection.messages.length === 0) && (
              <div className="text-center mt-10">
                <div className="text-6xl mb-4">👋</div>
