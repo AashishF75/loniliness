@@ -193,7 +193,7 @@ export function Connections() {
           )}
           {(activeConnection.messages || []).map((msg:any, i:number) => (
             <div key={i} className={`flex w-full ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-4 rounded-3xl text-xl max-w-[85%] leading-relaxed ${
+              <div className={`p-4 rounded-3xl text-xl max-w-[85%] leading-relaxed break-words ${
                 msg.sender === 'me' ? 'bg-brand-600 text-white rounded-tr-none shadow-md' : 'bg-white border border-gray-200 text-gray-900 rounded-tl-none shadow-sm'
               }`}>
                 <div>{msg.text}</div>

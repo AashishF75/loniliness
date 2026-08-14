@@ -770,7 +770,7 @@ export function Events() {
                             {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <div className={`p-3 rounded-2xl text-sm ${isMe ? 'bg-brand-500 text-white rounded-tr-sm' : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-tl-sm'}`}>
+                        <div className={`p-3 rounded-2xl text-sm break-words ${isMe ? 'bg-brand-500 text-white rounded-tr-sm' : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-tl-sm'}`}>
                           {msg.content}
                         </div>
                       </div>

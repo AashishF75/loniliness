@@ -113,7 +113,7 @@ export function AiCompanion() {
               </div>
 
               <div className={`flex flex-col gap-4 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`p-5 rounded-3xl text-xl leading-relaxed ${
+                <div className={`p-5 rounded-3xl text-xl leading-relaxed break-words ${
                   msg.role === 'user' 
                     ? 'bg-gray-900 text-white rounded-tr-none shadow-md' 
                     : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-md'
