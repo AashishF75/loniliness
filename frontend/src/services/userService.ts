@@ -19,8 +19,9 @@ export const userService = {
         method: 'PUT',
         body: JSON.stringify(data)
       });
-      localStorage.setItem('saathi_onboarding', JSON.stringify(updated));
-      return updated;
+      const userData = updated.user || updated;
+      localStorage.setItem('saathi_onboarding', JSON.stringify(userData));
+      return userData;
     } catch (err) {
       // Fallback
       const current = localStorage.getItem('saathi_onboarding');
