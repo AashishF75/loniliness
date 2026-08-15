@@ -150,3 +150,50 @@ export const activateUser = async (req: Request | any, res: Response): Promise<v
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+
+export const getEvents = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const events = await prisma.event.findMany({
+      include: {
+        creator: { select: { id: true, name: true } },
+        _count: { select: { participants: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, events });
+  } catch (error: any) {
+    console.error('Admin Get Events Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const removeEvent = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      res.status(404).json({ success: false, message: 'Event not found.' });
+      return;
+    }
+
+    if (event.status === 'REMOVED') {
+      res.status(400).json({ success: false, message: 'Event is already removed.' });
+      return;
+    }
+
+    await prisma.event.update({
+      where: { id },
+      data: { 
+        status: 'REMOVED',
+        removedAt: new Date(),
+        removedById: req.user.id
+      }
+    });
+
+    res.json({ success: true, message: 'Event removed successfully.' });
+  } catch (error: any) {
+    console.error('Admin Remove Event Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};

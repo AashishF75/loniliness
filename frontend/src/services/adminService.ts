@@ -56,5 +56,21 @@ export const adminService = {
     });
     if (!res.ok) throw new Error('Failed to activate user');
     return await res.json();
+  },
+
+  getEvents: async () => {
+    const res = await fetch(`${API_URL}/events`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch events');
+    const data = await res.json();
+    return data.events;
+  },
+
+  removeEvent: async (id: string) => {
+    const res = await fetch(`${API_URL}/events/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to remove event');
+    return await res.json();
   }
 };

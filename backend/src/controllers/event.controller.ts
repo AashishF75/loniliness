@@ -98,7 +98,7 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
     // Filters
     const { category, search, date, latitude, longitude, radius, filter, sort } = req.query;
     
-    let whereClause: any = {};
+    let whereClause: any = { status: { not: 'REMOVED' } };
     
     if (category && category !== 'All') {
       whereClause.category = category;
@@ -283,7 +283,7 @@ export const getEventById = async (req: Request | any, res: Response): Promise<v
       }
     });
 
-    if (!event) {
+    if (!event || event.status === 'REMOVED') {
       res.status(404).json({ success: false, message: 'Event not found' });
       return;
     }
@@ -337,7 +337,7 @@ export const joinEvent = async (req: Request | any, res: Response): Promise<void
       include: { participants: true }
     });
 
-    if (!event) {
+    if (!event || event.status === 'REMOVED') {
       res.status(404).json({ success: false, message: 'Event not found' });
       return;
     }
@@ -408,7 +408,7 @@ export const leaveEvent = async (req: Request | any, res: Response): Promise<voi
 
     const event = await prisma.event.findUnique({ where: { id } });
 
-    if (!event) {
+    if (!event || event.status === 'REMOVED') {
       res.status(404).json({ success: false, message: 'Event not found' });
       return;
     }
@@ -455,7 +455,7 @@ export const updateEvent = async (req: Request | any, res: Response): Promise<vo
 
     const event = await prisma.event.findUnique({ where: { id } });
 
-    if (!event) {
+    if (!event || event.status === 'REMOVED') {
       res.status(404).json({ success: false, message: 'Event not found' });
       return;
     }
@@ -522,7 +522,7 @@ export const deleteEvent = async (req: Request | any, res: Response): Promise<vo
 
     const event = await prisma.event.findUnique({ where: { id } });
 
-    if (!event) {
+    if (!event || event.status === 'REMOVED') {
       res.status(404).json({ success: false, message: 'Event not found' });
       return;
     }
@@ -548,6 +548,12 @@ export const saveEvent = async (req: Request | any, res: Response): Promise<void
 
     const { id } = req.params;
     
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event || event.status === 'REMOVED') {
+      res.status(404).json({ success: false, message: 'Event not found' });
+      return;
+    }
+
     const existing = await prisma.savedEvent.findUnique({
       where: { eventId_userId: { eventId: id, userId } }
     });
@@ -592,7 +598,7 @@ export const cancelEvent = async (req: Request | any, res: Response): Promise<vo
     const { id } = req.params;
     const event = await prisma.event.findUnique({ where: { id }, include: { participants: true } });
     
-    if (!event) { res.status(404).json({ success: false, message: 'Event not found' }); return; }
+    if (!event || event.status === 'REMOVED') { res.status(404).json({ success: false, message: 'Event not found' }); return; }
     if (event.createdById !== userId) { res.status(403).json({ success: false, message: 'Unauthorized' }); return; }
     
     await prisma.event.update({
@@ -637,7 +643,7 @@ export const getEventMessages = async (req: Request | any, res: Response): Promi
       }
     });
 
-    if (!event) { res.status(404).json({ success: false, message: 'Event not found' }); return; }
+    if (!event || event.status === 'REMOVED') { res.status(404).json({ success: false, message: 'Event not found' }); return; }
     
     if (event.createdById !== userId && event.participants.length === 0) {
       res.status(403).json({ success: false, message: 'You must join this event to view messages' });
@@ -689,7 +695,7 @@ export const sendEventMessage = async (req: Request | any, res: Response): Promi
       }
     });
 
-    if (!event) { res.status(404).json({ success: false, message: 'Event not found' }); return; }
+    if (!event || event.status === 'REMOVED') { res.status(404).json({ success: false, message: 'Event not found' }); return; }
     
     if (event.status === 'CANCELLED') {
       res.status(400).json({ success: false, message: 'Cannot send messages to a cancelled event' });

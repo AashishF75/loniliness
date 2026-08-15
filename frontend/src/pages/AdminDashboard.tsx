@@ -12,6 +12,7 @@ export function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('overview'); // overview, users, reports
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, ACTIVE, SUSPENDED
@@ -34,14 +35,16 @@ export function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [statsData, usersData, reportsData] = await Promise.all([
+      const [statsData, usersData, reportsData, eventsData] = await Promise.all([
         adminService.getDashboardStats(),
         adminService.getUsers(),
-        adminService.getReports()
+        adminService.getReports(),
+        adminService.getEvents()
       ]);
       setStats(statsData);
       setUsers(usersData);
       setReports(reportsData);
+      setEvents(eventsData);
     } catch (err) {
       console.error('Failed to load admin data');
     } finally {
@@ -79,6 +82,17 @@ export function AdminDashboard() {
     }
   };
 
+  const handleRemoveEvent = async (id: string, title: string) => {
+    if (window.confirm(`Are you sure you want to remove the event "${title}"?\nThis event will no longer be visible to users.`)) {
+      try {
+        await adminService.removeEvent(id);
+        setEvents(events.map(e => e.id === id ? { ...e, status: 'REMOVED' } : e));
+      } catch (err) {
+        alert('Failed to remove event.');
+      }
+    }
+  };
+
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'ALL' || u.status === filterStatus;
@@ -111,6 +125,7 @@ export function AdminDashboard() {
         <Button variant={activeTab === 'reports' ? 'primary' : 'outline'} onClick={() => setActiveTab('reports')} className="whitespace-nowrap">
           Reports {stats?.pendingReports > 0 && <span className="ml-2 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">{stats.pendingReports}</span>}
         </Button>
+        <Button variant={activeTab === 'events' ? 'primary' : 'outline'} onClick={() => setActiveTab('events')} className="whitespace-nowrap">Event Moderation</Button>
       </div>
 
       {activeTab === 'overview' && (
@@ -288,6 +303,54 @@ export function AdminDashboard() {
             ))
           )}
         </div>
+      )}
+      {activeTab === 'events' && (
+        <Card className="p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <h2 className="text-2xl font-bold text-gray-900">Event Moderation</h2>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {events.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">No events found.</div>
+            ) : (
+              events.map(event => (
+                <div key={event.id} className="border border-gray-200 rounded-xl p-4 flex flex-col md:flex-row justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className={`px-2 py-1 text-xs font-bold rounded-lg ${event.status === 'REMOVED' ? 'bg-red-100 text-red-700' : event.status === 'CANCELLED' ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'}`}>
+                        {event.status}
+                      </span>
+                      <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-1 rounded-lg">{event.category}</span>
+                      <span className="text-gray-500 text-sm">{new Date(event.date).toLocaleDateString()} at {event.startTime}</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{event.title}</h3>
+                    <div className="text-sm text-gray-600 mb-2 flex items-center gap-2">
+                      <span>By: <span className="font-bold">{event.creator?.name}</span></span>
+                      <span>•</span>
+                      <span>{event.location}</span>
+                    </div>
+                    <p className="text-sm text-gray-500 line-clamp-2">{event.description}</p>
+                    <div className="mt-3 text-xs font-bold text-gray-500">
+                      {event._count?.participants} / {event.maxParticipants} participants
+                    </div>
+                  </div>
+                  <div className="flex md:flex-col justify-end md:justify-center shrink-0">
+                    {event.status !== 'REMOVED' ? (
+                      <Button variant="outline" className="border-red-500 text-red-600 hover:bg-red-50 text-sm" onClick={() => handleRemoveEvent(event.id, event.title)}>
+                        Remove Event
+                      </Button>
+                    ) : (
+                      <span className="text-sm font-bold text-red-500 bg-red-50 px-4 py-2 rounded-xl text-center">
+                        Removed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
       )}
     </div>
   );

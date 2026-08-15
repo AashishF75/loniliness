@@ -206,6 +206,9 @@ model Event {
   participants    EventParticipant[]
   savedBy         SavedEvent[]
   messages        EventMessage[]
+
+  removedAt       DateTime?
+  removedById     String?  @db.ObjectId
 }
 
 model EventParticipant {
