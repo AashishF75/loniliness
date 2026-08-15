@@ -249,8 +249,8 @@ export function Connections() {
 
         <div className="bg-white p-4 md:p-6 border-t border-gray-200 shrink-0">
           <form onSubmit={handleSendMessage} className="flex gap-3">
-            <input value={messageInput} onChange={e => setMessageInput(e.target.value)} placeholder="Type your message..." className="flex-1 h-16 rounded-2xl border-2 border-gray-300 bg-gray-50 px-5 text-xl outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500 transition-all" />
-            <Button type="submit" className="h-16 w-16 px-0 flex items-center justify-center rounded-2xl shadow-md" disabled={!messageInput.trim()}>
+            <input value={messageInput} onChange={e => setMessageInput(e.target.value)} placeholder="Type your message..." className="flex-1 min-w-0 h-16 rounded-2xl border-2 border-gray-300 bg-gray-50 px-5 text-xl outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500 transition-all" />
+            <Button type="submit" className="h-16 w-16 shrink-0 px-0 flex items-center justify-center rounded-2xl shadow-md" disabled={!messageInput.trim()}>
               <Send className="w-8 h-8" />
             </Button>
           </form>
