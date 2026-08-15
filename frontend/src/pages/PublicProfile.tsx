@@ -43,7 +43,11 @@ export function PublicProfile() {
           setProfile(publicProfile);
         }
 
-        if (currentUser?.interests) setUserInterests(currentUser.interests);
+        if (currentUser?.hobbies) {
+          setUserInterests(currentUser.hobbies.map((h: any) => h.name));
+        } else if (currentUser?.interests) {
+          setUserInterests(currentUser.interests);
+        }
 
         const isAccepted = connections.some((c: any) => c.userId === id);
         const isPending = outgoing.includes(id);
@@ -78,7 +82,7 @@ export function PublicProfile() {
       try {
         await safetyService.blockUser(profile.id);
         alert(`${profile.name} has been blocked.`);
-        navigate('/app/people'); // Go back to people list after blocking
+        navigate('/people'); // Go back to people list after blocking
       } catch (err) {
         alert('Failed to block user.');
       }
@@ -134,7 +138,7 @@ export function PublicProfile() {
   else if (shared.length >= 3) percent = 95;
 
   return (
-    <div className="max-w-4xl mx-auto pb-10">
+    <div className="max-w-4xl mx-auto pb-10 pt-16 md:pt-0">
       <button 
         onClick={() => navigate(-1)} 
         className="flex items-center gap-2 text-brand-700 hover:text-brand-900 font-bold mb-6 transition-colors"
@@ -157,12 +161,12 @@ export function PublicProfile() {
               </h1>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-4 mt-3">
                 <span className="text-base sm:text-xl font-medium text-gray-600 flex items-center gap-1">
-                  Age {profile.age || 'N/A'}
+                  {profile.age !== null && profile.age !== undefined ? `Age ${profile.age}` : 'Age hidden'}
                 </span>
                 <span className="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>
                 <span className="text-base sm:text-xl font-medium text-gray-600 flex items-center gap-1">
                   <MapPin className="w-5 h-5" />
-                  {profile.locality ? `${profile.locality}, ${profile.city}` : profile.city || 'Location not set'}
+                  {profile.locality || profile.city ? `${profile.locality ? profile.locality + ', ' : ''}${profile.city || ''}` : profile.city === null ? 'Location hidden' : 'Location not set'}
                 </span>
               </div>
             </div>
@@ -206,7 +210,9 @@ export function PublicProfile() {
               
               <div className="bg-slate-50 p-6 rounded-3xl border border-gray-100">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Interests</h3>
-                {profileInterests.length > 0 ? (
+                {profile.hobbies === undefined ? (
+                  <p className="text-lg text-gray-500 italic">Interests hidden</p>
+                ) : profileInterests.length > 0 ? (
                   <div className="flex flex-wrap gap-3">
                     {profileInterests.map((interest: string) => {
                       const isShared = shared.includes(interest);
@@ -230,7 +236,7 @@ export function PublicProfile() {
             </div>
 
             <div className="space-y-6">
-              {distance && (
+              {(distance !== undefined && distance !== null) && (
                 <div className="bg-brand-50 p-6 rounded-3xl border border-brand-100 flex items-center gap-4">
                   <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
                     <MapPin className="w-6 h-6 text-brand-600" />
@@ -249,12 +255,14 @@ export function PublicProfile() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-brand-600 uppercase tracking-wider">Compatibility</p>
-                    <p className="text-2xl font-extrabold text-gray-900">{percent}% Match</p>
+                    <p className="text-2xl font-extrabold text-gray-900">{profile.hobbies === undefined ? 'Hidden' : `${percent}% Match`}</p>
                   </div>
                 </div>
                 
                 <h4 className="font-bold text-gray-900 mb-2">Common Interests</h4>
-                {shared.length > 0 ? (
+                {profile.hobbies === undefined ? (
+                  <p className="text-gray-600 italic">Interests hidden</p>
+                ) : shared.length > 0 ? (
                   <ul className="space-y-2">
                     {shared.map((s: string) => (
                       <li key={s} className="flex items-center gap-2 text-lg text-gray-700">

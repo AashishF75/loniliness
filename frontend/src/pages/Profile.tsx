@@ -60,6 +60,15 @@ export function Profile() {
     }
   };
 
+  const handlePrivacyToggle = async (field: string, value: boolean) => {
+    try {
+      const updated = await userService.updateUser({ [field]: value });
+      setUser(updated);
+    } catch (err) {
+      alert('Failed to update privacy settings.');
+    }
+  };
+
   const handleUnblock = async (userId: string) => {
     try {
       await safetyService.unblockUser(userId);
@@ -134,6 +143,45 @@ export function Profile() {
             <Button variant="outline" className="justify-start h-16 text-base sm:text-xl bg-gray-50 border-gray-200 hover:bg-gray-100 min-w-0" onClick={() => setShowBlockedUsers(true)}>
               <User className="w-5 h-5 sm:w-6 sm:h-6 mr-3 sm:mr-4 text-gray-600 shrink-0" /> <span className="truncate">Blocked Users ({blockedUsers.length})</span>
             </Button>
+            
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Privacy</h3>
+              
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <span className="text-lg font-medium text-gray-700">Show my age</span>
+                  <Button 
+                    variant={user.showAge !== false ? "primary" : "outline"}
+                    onClick={() => handlePrivacyToggle('showAge', user.showAge === false)}
+                    className="w-24"
+                  >
+                    {user.showAge !== false ? 'ON' : 'OFF'}
+                  </Button>
+                </div>
+                
+                <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <span className="text-lg font-medium text-gray-700">Show my location</span>
+                  <Button 
+                    variant={user.showLocation !== false ? "primary" : "outline"}
+                    onClick={() => handlePrivacyToggle('showLocation', user.showLocation === false)}
+                    className="w-24"
+                  >
+                    {user.showLocation !== false ? 'ON' : 'OFF'}
+                  </Button>
+                </div>
+                
+                <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <span className="text-lg font-medium text-gray-700">Show my interests</span>
+                  <Button 
+                    variant={user.showInterests !== false ? "primary" : "outline"}
+                    onClick={() => handlePrivacyToggle('showInterests', user.showInterests === false)}
+                    className="w-24"
+                  >
+                    {user.showInterests !== false ? 'ON' : 'OFF'}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
       </div>

@@ -155,7 +155,7 @@ export const getUserProfile = async (req: Request | any, res: Response): Promise
       return;
     }
 
-    const user = await prisma.user.findUnique({
+    const user: any = await prisma.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -165,6 +165,9 @@ export const getUserProfile = async (req: Request | any, res: Response): Promise
         locality: true,
         bio: true,
         avatar: true,
+        showAge: true,
+        showLocation: true,
+        showInterests: true,
         hobbies: {
           select: { name: true }
         }
@@ -175,6 +178,21 @@ export const getUserProfile = async (req: Request | any, res: Response): Promise
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
+
+    if (user.showAge === false) {
+      user.age = null;
+    }
+    if (user.showLocation === false) {
+      user.city = null;
+      user.locality = null;
+    }
+    if (user.showInterests === false) {
+      delete user.hobbies;
+    }
+
+    delete user.showAge;
+    delete user.showLocation;
+    delete user.showInterests;
 
     res.json({ success: true, user });
   } catch (error: any) {
@@ -191,7 +209,7 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
       return;
     }
 
-    const { name, age, city, locality, bio, interests, eventReminder } = req.body;
+    const { name, age, city, locality, bio, interests, eventReminder, showAge, showLocation, showInterests } = req.body;
     
     const updateData: any = {};
     if (name) updateData.name = name;
@@ -200,6 +218,9 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
     if (locality !== undefined) updateData.locality = locality;
     if (bio !== undefined) updateData.bio = bio;
     if (eventReminder !== undefined) updateData.eventReminder = eventReminder;
+    if (showAge !== undefined) updateData.showAge = showAge;
+    if (showLocation !== undefined) updateData.showLocation = showLocation;
+    if (showInterests !== undefined) updateData.showInterests = showInterests;
     
     if (interests && Array.isArray(interests)) {
       const hobbyIds = [];
@@ -227,6 +248,9 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
         bio: true,
         avatar: true,
         eventReminder: true,
+        showAge: true,
+        showLocation: true,
+        showInterests: true,
         hobbies: { select: { name: true } }
       }
     });
