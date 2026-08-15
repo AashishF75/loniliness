@@ -16,6 +16,7 @@ import { Family } from './pages/Family';
 import { Profile } from './pages/Profile';
 import { PublicProfile } from './pages/PublicProfile';
 import { Events } from './pages/Events';
+import { AdminDashboard } from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
             <Route path="/family" element={<Family />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/users/:id" element={<PublicProfile />} />
+            <Route path="/admin" element={<AdminDashboard />} />
           </Route>
         </Route>
       </Routes>

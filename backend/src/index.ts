@@ -19,6 +19,7 @@ import messageRoutes from './routes/message.routes';
 import notificationRoutes from './routes/notification.routes';
 import safetyRoutes from './routes/safety.routes';
 import eventRoutes from './routes/event.routes';
+import adminRoutes from './routes/admin.routes';
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -29,6 +30,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/safety', safetyRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Saathi API is running perfectly.' });
