@@ -90,10 +90,6 @@ export function RootLayout() {
     }
   };
 
-  const userStr = localStorage.getItem('saathi_onboarding');
-  const user = userStr ? JSON.parse(userStr) : null;
-  const isAdmin = user?.role === 'ADMIN';
-
   const navItems = [
     { path: '/dashboard', label: 'Home', icon: Home },
     { path: '/people', label: 'People', icon: Users },
@@ -103,10 +99,6 @@ export function RootLayout() {
     { path: '/ai-companion', label: 'Saathi', icon: MessageCircle },
     { path: '/family', label: 'Family', icon: Heart },
   ];
-
-  if (isAdmin) {
-    navItems.push({ path: '/admin', label: 'Admin Dashboard', icon: Shield });
-  }
 
   const hideNav = ['/', '/login', '/register', '/onboarding'].includes(location.pathname);
 

@@ -18,15 +18,26 @@ import { PublicProfile } from './pages/PublicProfile';
 import { Events } from './pages/Events';
 import { AdminDashboard } from './pages/AdminDashboard';
 
+import { AdminLayout } from './components/layout/AdminLayout';
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Admin Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+          </Route>
+        </Route>
+
+        {/* Normal Routes */}
         <Route element={<RootLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/people" element={<People />} />
@@ -37,7 +48,6 @@ function App() {
             <Route path="/family" element={<Family />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/users/:id" element={<PublicProfile />} />
-            <Route path="/admin" element={<AdminDashboard />} />
           </Route>
         </Route>
       </Routes>

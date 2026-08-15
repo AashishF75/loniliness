@@ -14,6 +14,21 @@ export function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    const token = localStorage.getItem('saathi_auth_token');
+    const userStr = localStorage.getItem('saathi_user');
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.role === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      } catch (e) {}
+    }
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -27,7 +42,11 @@ export function Login() {
     setLoading(false);
 
     if (res.success) {
-      navigate('/dashboard'); // or onboarding if they are new, but for MVP dashboard is fine
+      if (res.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard'); // or onboarding if they are new, but for MVP dashboard is fine
+      }
     } else {
       setError(res.message || 'Login failed. Please try again.');
     }

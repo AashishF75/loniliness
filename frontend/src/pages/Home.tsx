@@ -21,6 +21,23 @@ const staggerContainer: Variants = {
 export function Home() {
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    const token = localStorage.getItem('saathi_auth_token');
+    const userStr = localStorage.getItem('saathi_user');
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.role === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      } catch (e) {
+        // invalid JSON
+      }
+    }
+  }, [navigate]);
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 font-sans text-slate-900 -m-4 md:-m-6 lg:-m-8">
       {/* HEADER */}

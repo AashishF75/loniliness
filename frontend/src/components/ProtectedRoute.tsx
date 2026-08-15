@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { userService } from '../services/userService';
 
 export function ProtectedRoute() {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const location = useLocation();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -19,11 +21,15 @@ export function ProtectedRoute() {
         const user = await userService.getUser();
         if (user) {
           setIsAuthenticated(true);
+          setUserRole(user.role);
         } else {
           localStorage.removeItem('saathi_auth_token');
+          localStorage.removeItem('saathi_user');
           setIsAuthenticated(false);
         }
       } catch (err) {
+        localStorage.removeItem('saathi_auth_token');
+        localStorage.removeItem('saathi_user');
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
@@ -44,5 +50,17 @@ export function ProtectedRoute() {
     );
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Admin routing logic
+  if (userRole === 'ADMIN' && location.pathname !== '/admin') {
+    return <Navigate to="/admin" replace />;
+  }
+  if (userRole !== 'ADMIN' && location.pathname === '/admin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
 }
