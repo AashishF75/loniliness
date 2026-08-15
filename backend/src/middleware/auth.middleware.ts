@@ -11,8 +11,13 @@ export const protect = async (req: Request | any, res: Response, next: NextFunct
 
       req.user = await prisma.user.findUnique({
         where: { id: decoded.id },
-        select: { id: true, name: true, phone: true, role: true }
+        select: { id: true, name: true, phone: true, role: true, status: true }
       });
+
+      if (req.user && req.user.status === 'SUSPENDED') {
+        res.status(403).json({ message: 'Your account has been suspended for violating platform rules.' });
+        return;
+      }
 
       next();
     } catch (error) {

@@ -38,5 +38,23 @@ export const adminService = {
     });
     if (!res.ok) throw new Error('Failed to resolve report');
     return await res.json();
+  },
+
+  suspendUser: async (id: string) => {
+    const res = await fetch(`${API_URL}/users/${id}/suspend`, {
+      method: 'PUT',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to suspend user');
+    return await res.json();
+  },
+
+  activateUser: async (id: string) => {
+    const res = await fetch(`${API_URL}/users/${id}/activate`, {
+      method: 'PUT',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to activate user');
+    return await res.json();
   }
 };

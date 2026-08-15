@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 enum Role {
   SENIOR
   FAMILY
@@ -21,6 +26,7 @@ model User {
   password      String
   name          String
   role          Role      @default(SENIOR)
+  status        AccountStatus @default(ACTIVE)
   avatar        String?
   age           Int?
   city          String?

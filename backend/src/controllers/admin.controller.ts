@@ -45,6 +45,7 @@ export const getUsers = async (req: Request | any, res: Response): Promise<void>
         name: true,
         email: true,
         role: true,
+        status: true,
         city: true,
         createdAt: true,
         _count: {
@@ -97,6 +98,55 @@ export const resolveReport = async (req: Request | any, res: Response): Promise<
     res.json({ success: true, report });
   } catch (error: any) {
     console.error('Admin Resolve Report Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const suspendUser = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (id === req.user.id) {
+      res.status(400).json({ success: false, message: 'You cannot suspend your own account.' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found.' });
+      return;
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: { status: 'SUSPENDED' }
+    });
+
+    res.json({ success: true, message: 'User suspended successfully.' });
+  } catch (error: any) {
+    console.error('Admin Suspend User Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const activateUser = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found.' });
+      return;
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: { status: 'ACTIVE' }
+    });
+
+    res.json({ success: true, message: 'User activated successfully.' });
+  } catch (error: any) {
+    console.error('Admin Activate User Error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };

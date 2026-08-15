@@ -61,6 +61,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     
+    if (user && user.status === 'SUSPENDED') {
+      res.status(403).json({ success: false, message: 'Your account has been suspended for violating platform rules.' });
+      return;
+    }
+
     if (user && (await bcrypt.compare(password, user.password))) {
       res.json({
         success: true,

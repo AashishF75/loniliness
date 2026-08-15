@@ -14,6 +14,7 @@ export function AdminDashboard() {
   const [reports, setReports] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('overview'); // overview, users, reports
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, ACTIVE, SUSPENDED
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -58,10 +59,31 @@ export function AdminDashboard() {
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSuspendUser = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to suspend ${name}?\nThey will no longer be able to access Saathi.`)) {
+      try {
+        await adminService.suspendUser(id);
+        setUsers(users.map(u => u.id === id ? { ...u, status: 'SUSPENDED' } : u));
+      } catch (err) {
+        alert('Failed to suspend user.');
+      }
+    }
+  };
+
+  const handleActivateUser = async (id: string) => {
+    try {
+      await adminService.activateUser(id);
+      setUsers(users.map(u => u.id === id ? { ...u, status: 'ACTIVE' } : u));
+    } catch (err) {
+      alert('Failed to activate user.');
+    }
+  };
+
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'ALL' || u.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
 
   if (loading) {
     return (
@@ -143,26 +165,38 @@ export function AdminDashboard() {
         <Card className="p-6">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <h2 className="text-2xl font-bold text-gray-900">Platform Users</h2>
-            <div className="relative w-full sm:w-64">
-              <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search users..." 
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none"
-              />
+            <div className="flex gap-3 w-full sm:w-auto">
+              <select 
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-gray-700 bg-white"
+              >
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="SUSPENDED">Suspended</option>
+              </select>
+              <div className="relative flex-1 sm:w-64">
+                <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search users..." 
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none"
+                />
+              </div>
             </div>
           </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-gray-200 text-gray-500">
                   <th className="p-3 font-semibold">User</th>
                   <th className="p-3 font-semibold">Role</th>
-                  <th className="p-3 font-semibold">City</th>
+                  <th className="p-3 font-semibold">Status</th>
                   <th className="p-3 font-semibold">Joined</th>
-                  <th className="p-3 font-semibold">Reports</th>
+                  <th className="p-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -177,12 +211,27 @@ export function AdminDashboard() {
                         {u.role}
                       </span>
                     </td>
-                    <td className="p-3 text-gray-600">{u.city || '-'}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center w-fit gap-1 ${u.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        {u.status === 'ACTIVE' ? 'Active' : 'Suspended'}
+                      </span>
+                    </td>
                     <td className="p-3 text-gray-600">{new Date(u.createdAt).toLocaleDateString()}</td>
                     <td className="p-3">
-                      <span className={`font-bold ${u._count.reportsReceived > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {u._count.reportsReceived}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {u.role !== 'ADMIN' && (
+                          u.status === 'ACTIVE' ? (
+                            <Button variant="outline" className="border-red-500 text-red-600 hover:bg-red-50 py-1 h-8 text-xs" onClick={() => handleSuspendUser(u.id, u.name)}>
+                              Suspend
+                            </Button>
+                          ) : (
+                            <Button variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 py-1 h-8 text-xs" onClick={() => handleActivateUser(u.id)}>
+                              Activate
+                            </Button>
+                          )
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -219,16 +268,21 @@ export function AdminDashboard() {
                     </div>
                   </div>
                   
-                  {report.status === 'PENDING' && (
-                    <div className="flex md:flex-col gap-2 shrink-0 self-start md:self-stretch justify-center">
-                      <Button onClick={() => handleResolveReport(report.id, 'RESOLVED')} className="bg-red-600 hover:bg-red-700 border-red-600 text-white shadow-sm">
-                        Take Action / Resolve
-                      </Button>
-                      <Button variant="outline" onClick={() => handleResolveReport(report.id, 'DISMISSED')}>
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex md:flex-col gap-2 shrink-0 self-start md:self-stretch justify-center">
+                    {report.status === 'PENDING' && (
+                      <>
+                        <Button onClick={() => handleResolveReport(report.id, 'RESOLVED')} className="bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white shadow-sm py-1 h-auto text-sm">
+                          Resolve
+                        </Button>
+                        <Button variant="outline" onClick={() => handleResolveReport(report.id, 'DISMISSED')} className="py-1 h-auto text-sm">
+                          Dismiss
+                        </Button>
+                      </>
+                    )}
+                    <Button variant="outline" className="border-red-500 text-red-600 hover:bg-red-50 py-1 h-auto text-sm mt-auto" onClick={() => handleSuspendUser(report.reportedUser?.id, report.reportedUser?.name)}>
+                      Suspend User
+                    </Button>
+                  </div>
                 </div>
               </Card>
             ))
