@@ -1,76 +1,48 @@
-const API_URL = 'http://localhost:5000/api/admin';
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('saathi_auth_token');
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  };
-};
+import { fetchApi } from './api';
 
 export const adminService = {
   getDashboardStats: async () => {
-    const res = await fetch(`${API_URL}/dashboard`, { headers: getAuthHeaders() });
-    if (!res.ok) throw new Error('Failed to fetch stats');
-    const data = await res.json();
+    const data = await fetchApi('/admin/dashboard');
     return data.stats;
   },
 
   getUsers: async () => {
-    const res = await fetch(`${API_URL}/users`, { headers: getAuthHeaders() });
-    if (!res.ok) throw new Error('Failed to fetch users');
-    const data = await res.json();
+    const data = await fetchApi('/admin/users');
     return data.users;
   },
 
   getReports: async () => {
-    const res = await fetch(`${API_URL}/reports`, { headers: getAuthHeaders() });
-    if (!res.ok) throw new Error('Failed to fetch reports');
-    const data = await res.json();
+    const data = await fetchApi('/admin/reports');
     return data.reports;
   },
 
   resolveReport: async (id: string, status: string) => {
-    const res = await fetch(`${API_URL}/reports/${id}/resolve`, {
+    return await fetchApi(`/admin/reports/${id}/resolve`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
       body: JSON.stringify({ status })
     });
-    if (!res.ok) throw new Error('Failed to resolve report');
-    return await res.json();
   },
 
   suspendUser: async (id: string) => {
-    const res = await fetch(`${API_URL}/users/${id}/suspend`, {
-      method: 'PUT',
-      headers: getAuthHeaders()
+    return await fetchApi(`/admin/users/${id}/suspend`, {
+      method: 'PUT'
     });
-    if (!res.ok) throw new Error('Failed to suspend user');
-    return await res.json();
   },
 
   activateUser: async (id: string) => {
-    const res = await fetch(`${API_URL}/users/${id}/activate`, {
-      method: 'PUT',
-      headers: getAuthHeaders()
+    return await fetchApi(`/admin/users/${id}/activate`, {
+      method: 'PUT'
     });
-    if (!res.ok) throw new Error('Failed to activate user');
-    return await res.json();
   },
 
   getEvents: async () => {
-    const res = await fetch(`${API_URL}/events`, { headers: getAuthHeaders() });
-    if (!res.ok) throw new Error('Failed to fetch events');
-    const data = await res.json();
+    const data = await fetchApi('/admin/events');
     return data.events;
   },
 
   removeEvent: async (id: string) => {
-    const res = await fetch(`${API_URL}/events/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
+    return await fetchApi(`/admin/events/${id}`, {
+      method: 'DELETE'
     });
-    if (!res.ok) throw new Error('Failed to remove event');
-    return await res.json();
   }
 };

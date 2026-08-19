@@ -13,6 +13,7 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview'); // overview, users, reports
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, ACTIVE, SUSPENDED
@@ -46,7 +47,8 @@ export function AdminDashboard() {
       setReports(reportsData);
       setEvents(eventsData);
     } catch (err) {
-      console.error('Failed to load admin data');
+      console.error('Failed to load admin data', err);
+      setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -103,6 +105,16 @@ export function AdminDashboard() {
     return (
       <div className="flex justify-center items-center py-20">
         <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col justify-center items-center py-20 gap-4">
+        <AlertTriangle className="w-16 h-16 text-red-500" />
+        <p className="text-xl text-gray-700 font-bold">{error}</p>
+        <Button onClick={() => { setLoading(true); setError(null); loadData(); }}>Try Again</Button>
       </div>
     );
   }
