@@ -6,14 +6,24 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const R = 6371; // km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
+  const a =
     Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
 }
 
+function getBoundingBox(lat: number, lon: number, radiusKm: number) {
+  const latDelta = radiusKm / 111;
+  const lonDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
+  return {
+    minLat: lat - latDelta,
+    maxLat: lat + latDelta,
+    minLon: lon - Math.abs(lonDelta),
+    maxLon: lon + Math.abs(lonDelta)
+  };
+}
 export const getNearbyUsers = async (req: Request | any, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
@@ -44,7 +54,7 @@ export const getNearbyUsers = async (req: Request | any, res: Response): Promise
       res.status(400).json({ success: false, message: 'Location not available for current user' });
       return;
     }
-    
+
     // Update current user's location if it was provided in query and is different
     if (latitude && longitude && (currentUser.latitude !== userLat || currentUser.longitude !== userLon)) {
       await prisma.user.update({
@@ -63,19 +73,21 @@ export const getNearbyUsers = async (req: Request | any, res: Response): Promise
       }
     });
 
-    const blockedUserIds = userBlocks.map((b: any) => 
+    const blockedUserIds = userBlocks.map((b: any) =>
       b.blockerId === userId ? b.blockedId : b.blockerId
     );
+
+    const bbox = getBoundingBox(userLat as number, userLon as number, maxRadius);
 
     // Get all other users who have location and are not blocked
     const otherUsers = await prisma.user.findMany({
       where: {
-        id: { 
+        id: {
           not: userId,
           notIn: blockedUserIds
         },
-        latitude: { not: null },
-        longitude: { not: null },
+        latitude: { gte: bbox.minLat, lte: bbox.maxLat },
+        longitude: { gte: bbox.minLon, lte: bbox.maxLon },
       },
       select: {
         id: true,
@@ -99,9 +111,9 @@ export const getNearbyUsers = async (req: Request | any, res: Response): Promise
     const nearbyUsers = otherUsers.map((user: any) => {
       const distance = calculateDistance(userLat as number, userLon as number, user.latitude!, user.longitude!);
       const { latitude, longitude, ...safeUser } = user; // Strip private coordinates
-      
+
       const userHobbyNames = user.hobbies ? user.hobbies.map((h:any) => h.name) : [];
-      
+
       return {
         ...safeUser,
         interests: userHobbyNames,
@@ -136,9 +148,20 @@ export const getNearbyUsers = async (req: Request | any, res: Response): Promise
       return true;
     }).sort((a: any, b: any) => a.distance - b.distance);
 
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const paginatedUsers = nearbyUsers.slice(offset, offset + limit);
+
     res.json({
       success: true,
-      users: nearbyUsers
+      users: paginatedUsers,
+      pagination: {
+        limit,
+        offset,
+        total: nearbyUsers.length,
+        hasMore: offset + limit < nearbyUsers.length
+      }
     });
   } catch (error: any) {
     console.error('Nearby Users Error:', error.message || error);
@@ -210,7 +233,7 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
     }
 
     const { name, age, city, locality, bio, interests, eventReminder, showAge, showLocation, showInterests } = req.body;
-    
+
     const updateData: any = {};
     if (name) updateData.name = name;
     if (age !== undefined) updateData.age = age;
@@ -221,7 +244,7 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
     if (showAge !== undefined) updateData.showAge = showAge;
     if (showLocation !== undefined) updateData.showLocation = showLocation;
     if (showInterests !== undefined) updateData.showInterests = showInterests;
-    
+
     if (interests && Array.isArray(interests)) {
       const hobbyIds = [];
       for (const interest of interests) {

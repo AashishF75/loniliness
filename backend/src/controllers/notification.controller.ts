@@ -13,11 +13,12 @@ export const getNotifications = async (req: Request | any, res: Response): Promi
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user && user.eventReminder !== 'NONE') {
       const now = new Date();
+      const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       
       const upcomingEvents = await prisma.event.findMany({
         where: {
           status: 'ACTIVE',
-          date: { gt: now },
+          date: { gt: now, lte: oneDayFromNow },
           OR: [
             { participants: { some: { userId } } },
             { savedBy: { some: { userId } } }
@@ -53,33 +54,57 @@ export const getNotifications = async (req: Request | any, res: Response): Promi
           });
 
           if (!existing) {
-            await prisma.notification.create({
-              data: {
-                userId,
-                type: 'EVENT_REMINDER',
-                title,
-                message,
-                relatedEventId: event.id
+            try {
+              await prisma.notification.create({
+                data: {
+                  userId,
+                  type: 'EVENT_REMINDER',
+                  title,
+                  message,
+                  relatedEventId: event.id
+                }
+              });
+            } catch (err: any) {
+              if (err.code === 'P2002') {
+                // Ignore unique constraint violation (concurrent duplicate request handled)
+              } else {
+                throw err;
               }
-            });
+            }
           }
         }
       }
     }
 
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+
     const notifications = await prisma.notification.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset
     });
 
-    // Manually attach connection status
-    const formattedNotifications = await Promise.all(notifications.map(async (notif: any) => {
+    // Fix N+1 Connection Status Query
+    const connectionIds = notifications
+      .filter((n: any) => n.type === 'NEW_CONNECTION_REQUEST' && n.relatedConnectionId)
+      .map((n: any) => n.relatedConnectionId as string);
+
+    let connectionMap = new Map();
+    if (connectionIds.length > 0) {
+      const connections = await prisma.connection.findMany({
+        where: { id: { in: connectionIds } }
+      });
+      connections.forEach((c: any) => connectionMap.set(c.id, c.status));
+    }
+
+    const formattedNotifications = notifications.map((notif: any) => {
       if (notif.type === 'NEW_CONNECTION_REQUEST' && notif.relatedConnectionId) {
-        const conn = await prisma.connection.findUnique({ where: { id: notif.relatedConnectionId } });
-        return { ...notif, connectionStatus: conn ? conn.status : null };
+        return { ...notif, connectionStatus: connectionMap.get(notif.relatedConnectionId) || null };
       }
       return notif;
-    }));
+    });
 
     res.json({ success: true, notifications: formattedNotifications });
   } catch (error: any) {

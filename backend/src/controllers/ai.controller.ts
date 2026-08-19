@@ -28,9 +28,9 @@ User Message: "${text}"
 Available Nearby People: ${JSON.stringify(nearbyPeople)}
 Available Activities: ${JSON.stringify(activities)}
 
-Task: 
+Task:
 Analyze the user's message, mood, interests, and profile.
-Recommend suitable nearby people from the provided list. 
+Recommend suitable nearby people from the provided list.
 Recommend suitable activities from the provided list.
 Provide a short, supportive response message.
 
@@ -48,11 +48,21 @@ Return ONLY valid JSON.
 `;
 
     console.log('[AI Route] Sending request to Gemini API...');
-    const result = await model.generateContent(prompt);
+
+    // Implement a 10-second timeout to prevent hanging requests
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 10000);
+    });
+
+    const result: any = await Promise.race([
+      model.generateContent(prompt),
+      timeoutPromise
+    ]);
+
     const response = await result.response;
     const responseText = response.text();
     console.log('[AI Route] Gemini response received successfully');
-    
+
     // Extract JSON
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
@@ -66,7 +76,25 @@ Return ONLY valid JSON.
       data: jsonResponse
     });
   } catch (error: any) {
-    console.error(`[AI Route] Error generating recommendations (HTTP 500):`, error.message || error);
+    console.error(`[AI Route] Error generating recommendations:`, error.message || error);
+
+    const errMessage = error.message || '';
+
+    if (errMessage === 'GEMINI_TIMEOUT') {
+      res.status(503).json({ success: false, message: 'Saathi AI is temporarily unavailable (timeout). Please try again later.' });
+      return;
+    }
+
+    if (errMessage.includes('429') || errMessage.toLowerCase().includes('quota')) {
+      res.status(429).json({ success: false, message: 'Saathi AI quota exceeded. Please try again later.' });
+      return;
+    }
+
+    if (errMessage.includes('500') || errMessage.includes('502') || errMessage.includes('503') || errMessage.includes('504')) {
+      res.status(502).json({ success: false, message: 'Saathi AI service is currently experiencing issues. Please try again later.' });
+      return;
+    }
+
     res.status(500).json({ success: false, message: 'Failed to generate AI recommendations.' });
   }
 };

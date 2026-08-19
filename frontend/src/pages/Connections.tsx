@@ -9,6 +9,8 @@ import { notificationService } from '../services/notificationService';
 export function Connections() {
 
   const [connected, setConnected] = useState<any[]>([]);
+  const connectedRef = useRef(connected);
+  useEffect(() => { connectedRef.current = connected; }, [connected]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -24,10 +26,10 @@ export function Connections() {
         connectionService.getConnections()
       ]);
       const accepted = connectedData.filter((c: any) => c.status === 'ACCEPTED');
-      
+
       const unreadMessages = (await notificationService.getNotifications())
         .filter((n: any) => n.type === 'NEW_MESSAGE' && !n.isRead);
-        
+
       const unreadCountByUserId: Record<string, number> = {};
       unreadMessages.forEach((n: any) => {
         unreadCountByUserId[n.relatedUserId] = (unreadCountByUserId[n.relatedUserId] || 0) + 1;
@@ -101,23 +103,30 @@ export function Connections() {
     let pollInterval: any;
 
     if (activeChatId) {
-      const conn = connected.find((c: any) => c.id === activeChatId);
+      const conn = connectedRef.current.find((c: any) => c.id === activeChatId);
       const targetUserId = conn?.userId;
-      
+
       if (!targetUserId) return;
 
       const fetchChat = async () => {
         try {
-          const newMessages = await connectionService.getConversation(targetUserId);
-          
+          const currentConn = connectedRef.current.find((c: any) => c.id === activeChatId);
+          if (!currentConn) return;
+
+          const msgs = currentConn.messages || [];
+          const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+          const after = lastMsg ? lastMsg.createdAt : undefined;
+          const afterId = lastMsg ? lastMsg.id : undefined;
+
+          const newMessages = await connectionService.getConversation(targetUserId, after, afterId);
+
+          if (newMessages.length === 0) return;
+
           setConnected(prev => {
-            const currentConn = prev.find(c => c.id === activeChatId);
-            if (!currentConn) return prev;
-            
-            const oldLen = currentConn.messages?.length || 0;
-            const newLen = newMessages.length;
-            
-            if (newLen === oldLen) return prev;
+            const currentConnPrev = prev.find(c => c.id === activeChatId);
+            if (!currentConnPrev) return prev;
+
+            const updatedMessages = [...(currentConnPrev.messages || []), ...newMessages];
 
             let isNearBottom = true;
             if (scrollContainerRef.current) {
@@ -131,7 +140,7 @@ export function Connections() {
               }, 100);
             }
 
-            return prev.map(c => c.id === activeChatId ? { ...c, messages: newMessages } : c);
+            return prev.map(c => c.id === activeChatId ? { ...c, messages: updatedMessages } : c);
           });
         } catch (err) {
           console.warn('Chat polling error:', err);
@@ -139,7 +148,7 @@ export function Connections() {
       };
 
       fetchChat();
-      
+
       if (!fetchedChats[activeChatId]) {
         setFetchedChats(prev => ({ ...prev, [activeChatId]: true }));
         setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 200);
@@ -155,7 +164,7 @@ export function Connections() {
 
   useEffect(() => {
     fetchConnections();
-    
+
     const handleUpdate = () => fetchConnections();
     window.addEventListener('connections_updated', handleUpdate);
     return () => window.removeEventListener('connections_updated', handleUpdate);
@@ -335,10 +344,10 @@ export function Connections() {
           <Card className="bg-white w-full max-w-md p-6 flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-gray-900">Report User</h2>
             <p className="text-gray-600">Please let us know why you are reporting this user.</p>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-              <select 
+              <select
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
                 className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
@@ -350,11 +359,11 @@ export function Connections() {
                 <option value="Other">Other</option>
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Details (Optional)</label>
-              <textarea 
-                value={reportDescription} 
+              <textarea
+                value={reportDescription}
                 onChange={e => setReportDescription(e.target.value)}
                 placeholder="Provide additional details..."
                 className="flex w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 min-h-[100px]"

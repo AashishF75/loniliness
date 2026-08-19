@@ -125,16 +125,37 @@ export const getConversation = async (req: Request | any, res: Response): Promis
       return;
     }
 
-    const messages = await prisma.message.findMany({
-      where: {
+    const { after, afterId } = req.query;
+
+    let whereClause: any = {
+      AND: [
+        {
+          OR: [
+            { senderId: currentUserId, receiverId: otherUserId },
+            { senderId: otherUserId, receiverId: currentUserId }
+          ]
+        }
+      ]
+    };
+
+    if (after && typeof after === 'string' && afterId && typeof afterId === 'string') {
+      whereClause.AND.push({
         OR: [
-          { senderId: currentUserId, receiverId: otherUserId },
-          { senderId: otherUserId, receiverId: currentUserId }
+          { createdAt: { gt: new Date(after) } },
+          {
+            createdAt: new Date(after),
+            id: { gt: afterId }
+          }
         ]
-      },
+      });
+    }
+
+    const messages = await prisma.message.findMany({
+      where: whereClause,
       orderBy: {
-        createdAt: 'asc'
+        createdAt: 'desc' // get newest first
       },
+      take: after ? undefined : 50, // limit to 50 on initial load, unbounded for 'after' (usually small)
       select: {
         id: true,
         content: true,
@@ -146,6 +167,8 @@ export const getConversation = async (req: Request | any, res: Response): Promis
         }
       }
     });
+
+    messages.reverse(); // reverse to chronological order
 
     res.json({ success: true, messages });
   } catch (error: any) {

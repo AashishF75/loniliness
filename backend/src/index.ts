@@ -20,6 +20,10 @@ import notificationRoutes from './routes/notification.routes';
 import safetyRoutes from './routes/safety.routes';
 import eventRoutes from './routes/event.routes';
 import adminRoutes from './routes/admin.routes';
+import { globalLimiter } from './middleware/rateLimiter';
+
+// Apply global rate limiting to all API routes
+app.use('/api', globalLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);

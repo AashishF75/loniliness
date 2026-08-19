@@ -4,19 +4,19 @@ import { prisma } from '../index';
 // Helper to determine event status dynamically
 function getEventStatus(event: any) {
   if (event.status === 'CANCELLED') return 'CANCELLED';
-  
+
   const now = new Date();
-  
+
   // Create Date object for event date + end time to check if completed
   const eventDate = new Date(event.date);
   eventDate.setHours(0, 0, 0, 0);
-  
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   if (eventDate < today) return 'COMPLETED';
   if (eventDate.getTime() === today.getTime()) return 'ONGOING';
-  
+
   return 'UPCOMING';
 }
 
@@ -25,12 +25,23 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const R = 6371; // km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
+  const a =
     Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
+}
+
+function getBoundingBox(lat: number, lon: number, radiusKm: number) {
+  const latDelta = radiusKm / 111;
+  const lonDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
+  return {
+    minLat: lat - latDelta,
+    maxLat: lat + latDelta,
+    minLon: lon - Math.abs(lonDelta),
+    maxLon: lon + Math.abs(lonDelta)
+  };
 }
 
 export const createEvent = async (req: Request | any, res: Response): Promise<void> => {
@@ -94,16 +105,16 @@ export const createEvent = async (req: Request | any, res: Response): Promise<vo
 export const getEvents = async (req: Request | any, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
-    
+
     // Filters
     const { category, search, date, latitude, longitude, radius, filter, sort } = req.query;
-    
+
     let whereClause: any = { status: { not: 'REMOVED' } };
-    
+
     if (category && category !== 'All') {
       whereClause.category = category;
     }
-    
+
     if (search) {
       whereClause.OR = [
         { title: { contains: search as string, mode: 'insensitive' } },
@@ -111,7 +122,7 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
         { location: { contains: search as string, mode: 'insensitive' } }
       ];
     }
-    
+
     if (date === 'upcoming') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -147,10 +158,21 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
         where: { OR: [{ blockerId: userId }, { blockedId: userId }] }
       });
       blockedUserIds = userBlocks.map((b: any) => b.blockerId === userId ? b.blockedId : b.blockerId);
-      
+
       if (blockedUserIds.length > 0) {
         whereClause.createdById = { notIn: blockedUserIds };
       }
+    }
+
+    // Apply Bounding Box if radius is provided
+    let userLatForDist = latitude ? parseFloat(latitude as string) : currentUser?.latitude;
+    let userLonForDist = longitude ? parseFloat(longitude as string) : currentUser?.longitude;
+
+    if (radius && radius !== 'All' && userLatForDist && userLonForDist) {
+      const maxRadius = parseFloat(radius as string);
+      const bbox = getBoundingBox(userLatForDist, userLonForDist, maxRadius);
+      whereClause.latitude = { gte: bbox.minLat, lte: bbox.maxLat };
+      whereClause.longitude = { gte: bbox.minLon, lte: bbox.maxLon };
     }
 
     const events = await prisma.event.findMany({
@@ -159,9 +181,13 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
         creator: {
           select: { id: true, name: true, avatar: true }
         },
-        participants: {
-          select: { userId: true }
+        _count: {
+          select: { participants: true }
         },
+        participants: userId ? {
+          where: { userId },
+          select: { userId: true }
+        } : false,
         savedBy: userId ? {
           where: { userId }
         } : false
@@ -172,20 +198,20 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
     // Formatting and distance calculation
     let formattedEvents = events.map((event: any) => {
       const { latitude: eLat, longitude: eLon, ...safeEvent } = event;
-      
+
       let distance = null;
       if (latitude && longitude && eLat && eLon) {
         distance = calculateDistance(
-          parseFloat(latitude as string), 
-          parseFloat(longitude as string), 
-          eLat, 
+          parseFloat(latitude as string),
+          parseFloat(longitude as string),
+          eLat,
           eLon
         );
       } else if (currentUser?.latitude && currentUser?.longitude && eLat && eLon) {
         distance = calculateDistance(
-          currentUser.latitude, 
-          currentUser.longitude, 
-          eLat, 
+          currentUser.latitude,
+          currentUser.longitude,
+          eLat,
           eLon
         );
       }
@@ -205,8 +231,8 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
       return {
         ...safeEvent,
         distance: distance ? parseFloat(distance.toFixed(1)) : null,
-        participantCount: event.participants.length,
-        hasJoined: userId ? event.participants.some((p: any) => p.userId === userId) : false,
+        participantCount: event._count?.participants || 0,
+        hasJoined: userId && event.participants ? event.participants.length > 0 : false,
         isSaved: userId ? event.savedBy && event.savedBy.length > 0 : false,
         recommended,
         dynamicStatus: getEventStatus(event)
@@ -252,7 +278,20 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
       });
     }
 
-    res.json({ success: true, events: formattedEvents });
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const paginatedEvents = formattedEvents.slice(offset, offset + limit);
+
+    res.json({
+      success: true,
+      events: paginatedEvents,
+      pagination: {
+        limit,
+        offset,
+        total: formattedEvents.length,
+        hasMore: offset + limit < formattedEvents.length
+      }
+    });
   } catch (error: any) {
     console.error('Get Events Error:', error.message || error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -547,7 +586,7 @@ export const saveEvent = async (req: Request | any, res: Response): Promise<void
     if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
 
     const { id } = req.params;
-    
+
     const event = await prisma.event.findUnique({ where: { id } });
     if (!event || event.status === 'REMOVED') {
       res.status(404).json({ success: false, message: 'Event not found' });
@@ -557,16 +596,16 @@ export const saveEvent = async (req: Request | any, res: Response): Promise<void
     const existing = await prisma.savedEvent.findUnique({
       where: { eventId_userId: { eventId: id, userId } }
     });
-    
+
     if (existing) {
       res.status(400).json({ success: false, message: 'You have already saved this event.' });
       return;
     }
-    
+
     await prisma.savedEvent.create({
       data: { eventId: id, userId }
     });
-    
+
     res.json({ success: true, message: 'Event saved successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -579,11 +618,11 @@ export const unsaveEvent = async (req: Request | any, res: Response): Promise<vo
     if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
 
     const { id } = req.params;
-    
+
     await prisma.savedEvent.delete({
       where: { eventId_userId: { eventId: id, userId } }
     }).catch(() => {});
-    
+
     res.json({ success: true, message: 'Event unsaved successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -597,15 +636,15 @@ export const cancelEvent = async (req: Request | any, res: Response): Promise<vo
 
     const { id } = req.params;
     const event = await prisma.event.findUnique({ where: { id }, include: { participants: true } });
-    
+
     if (!event || event.status === 'REMOVED') { res.status(404).json({ success: false, message: 'Event not found' }); return; }
     if (event.createdById !== userId) { res.status(403).json({ success: false, message: 'Unauthorized' }); return; }
-    
+
     await prisma.event.update({
       where: { id },
       data: { status: 'CANCELLED' }
     });
-    
+
     for (const p of event.participants) {
       if (p.userId !== userId) {
         await prisma.notification.create({
@@ -619,7 +658,7 @@ export const cancelEvent = async (req: Request | any, res: Response): Promise<vo
         });
       }
     }
-    
+
     res.json({ success: true, message: 'Event cancelled successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -632,7 +671,7 @@ export const getEventMessages = async (req: Request | any, res: Response): Promi
     if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
 
     const { id } = req.params;
-    
+
     // Check if event exists and user is participant
     const event = await prisma.event.findUnique({
       where: { id },
@@ -644,7 +683,7 @@ export const getEventMessages = async (req: Request | any, res: Response): Promi
     });
 
     if (!event || event.status === 'REMOVED') { res.status(404).json({ success: false, message: 'Event not found' }); return; }
-    
+
     if (event.createdById !== userId && event.participants.length === 0) {
       res.status(403).json({ success: false, message: 'You must join this event to view messages' });
       return;
@@ -696,7 +735,7 @@ export const sendEventMessage = async (req: Request | any, res: Response): Promi
     });
 
     if (!event || event.status === 'REMOVED') { res.status(404).json({ success: false, message: 'Event not found' }); return; }
-    
+
     if (event.status === 'CANCELLED') {
       res.status(400).json({ success: false, message: 'Cannot send messages to a cancelled event' });
       return;

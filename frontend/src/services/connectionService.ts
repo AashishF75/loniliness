@@ -29,7 +29,7 @@ export const connectionService = {
       if (filters?.interest) params.append('interest', filters.interest);
       if (filters?.commonInterestsOnly) params.append('commonInterestsOnly', 'true');
 
-      const data = await fetchApi('/users/nearby?' + params.toString()); 
+      const data = await fetchApi('/users/nearby?' + params.toString());
       if (data && data.success && data.users) {
          return data.users.map((u:any) => {
           let interestsArr = [];
@@ -118,7 +118,7 @@ export const connectionService = {
       return { success: false };
     }
   },
-  
+
   async updateConnectionStatus(id: string, status: string) {
     try {
       const action = status === 'ACCEPTED' ? 'accept' : 'reject';
@@ -144,9 +144,12 @@ export const connectionService = {
     }
   },
 
-  async getConversation(userId: string) {
+  async getConversation(userId: string, after?: string, afterId?: string) {
     try {
-      const data = await fetchApi(`/messages/${userId}`);
+      const url = after && afterId
+        ? `/messages/${userId}?after=${after}&afterId=${afterId}`
+        : `/messages/${userId}`;
+      const data = await fetchApi(url);
       if (data && data.success && data.messages) {
         return data.messages.map((m: any) => ({
           ...m,

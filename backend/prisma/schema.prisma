@@ -77,6 +77,8 @@ model User {
   eventParticipations EventParticipant[]
   savedEvents      SavedEvent[]
   eventMessages    EventMessage[]
+
+  @@index([createdAt])
 }
 
 model Hobby {
@@ -94,6 +96,9 @@ model Connection {
   connected   User     @relation("ConnectedUsers", fields: [connectedId], references: [id])
   status      String   @default("PENDING") // PENDING, ACCEPTED, BLOCKED
   createdAt   DateTime @default(now())
+
+  @@index([userId, status])
+  @@index([connectedId, status])
 }
 
 model Message {
@@ -104,6 +109,10 @@ model Message {
   receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
   content     String
   createdAt   DateTime @default(now())
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, senderId])
+  @@index([createdAt])
 }
 
 model Notification {
@@ -119,6 +128,10 @@ model Notification {
   relatedEventId      String?  @db.ObjectId
   isRead              Boolean  @default(false)
   createdAt           DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([userId, relatedEventId, type, title])
 }
 
 model Activity {
@@ -181,6 +194,8 @@ model Report {
   status          String   @default("PENDING") // PENDING, REVIEWED, RESOLVED, DISMISSED
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([createdAt])
 }
 
 model Event {
@@ -209,6 +224,11 @@ model Event {
 
   removedAt       DateTime?
   removedById     String?  @db.ObjectId
+
+  @@index([status, date])
+  @@index([category, status])
+  @@index([createdById])
+  @@index([createdAt])
 }
 
 model EventParticipant {
@@ -241,4 +261,6 @@ model EventMessage {
   sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
   content   String
   createdAt DateTime @default(now())
+
+  @@index([eventId, createdAt])
 }

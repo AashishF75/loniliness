@@ -39,6 +39,9 @@ export const getDashboardStats = async (req: Request | any, res: Response): Prom
 
 export const getUsers = async (req: Request | any, res: Response): Promise<void> => {
   try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -55,9 +58,16 @@ export const getUsers = async (req: Request | any, res: Response): Promise<void>
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset
     });
-    res.json({ success: true, users });
+    const total = await prisma.user.count();
+    res.json({
+      success: true,
+      users,
+      pagination: { limit, offset, total, hasMore: offset + limit < total }
+    });
   } catch (error: any) {
     console.error('Admin Get Users Error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -66,14 +76,24 @@ export const getUsers = async (req: Request | any, res: Response): Promise<void>
 
 export const getReports = async (req: Request | any, res: Response): Promise<void> => {
   try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+
     const reports = await prisma.report.findMany({
       include: {
         reporter: { select: { id: true, name: true } },
         reportedUser: { select: { id: true, name: true } }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset
     });
-    res.json({ success: true, reports });
+    const total = await prisma.report.count();
+    res.json({
+      success: true,
+      reports,
+      pagination: { limit, offset, total, hasMore: offset + limit < total }
+    });
   } catch (error: any) {
     console.error('Admin Get Reports Error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -84,7 +104,7 @@ export const resolveReport = async (req: Request | any, res: Response): Promise<
   try {
     const { id } = req.params;
     const { status } = req.body; // e.g. 'RESOLVED', 'DISMISSED'
-    
+
     if (!status || (status !== 'RESOLVED' && status !== 'DISMISSED')) {
       res.status(400).json({ success: false, message: 'Invalid status' });
       return;
@@ -153,14 +173,24 @@ export const activateUser = async (req: Request | any, res: Response): Promise<v
 
 export const getEvents = async (req: Request | any, res: Response): Promise<void> => {
   try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+
     const events = await prisma.event.findMany({
       include: {
         creator: { select: { id: true, name: true } },
         _count: { select: { participants: true } }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset
     });
-    res.json({ success: true, events });
+    const total = await prisma.event.count();
+    res.json({
+      success: true,
+      events,
+      pagination: { limit, offset, total, hasMore: offset + limit < total }
+    });
   } catch (error: any) {
     console.error('Admin Get Events Error:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -170,7 +200,7 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
 export const removeEvent = async (req: Request | any, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    
+
     const event = await prisma.event.findUnique({ where: { id } });
     if (!event) {
       res.status(404).json({ success: false, message: 'Event not found.' });
@@ -184,7 +214,7 @@ export const removeEvent = async (req: Request | any, res: Response): Promise<vo
 
     await prisma.event.update({
       where: { id },
-      data: { 
+      data: {
         status: 'REMOVED',
         removedAt: new Date(),
         removedById: req.user.id
