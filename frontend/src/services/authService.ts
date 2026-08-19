@@ -9,7 +9,7 @@ export const authService = {
       });
       localStorage.setItem('saathi_auth_token', data.token);
       localStorage.setItem('saathi_user', JSON.stringify(data));
-      return { success: true };
+      return { success: true, role: data.role };
     } catch (err: any) {
       return { success: false, message: err.message };
     }
