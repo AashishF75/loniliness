@@ -126,7 +126,16 @@ export function Connections() {
             const currentConnPrev = prev.find(c => c.id === activeChatId);
             if (!currentConnPrev) return prev;
 
-            const updatedMessages = [...(currentConnPrev.messages || []), ...newMessages];
+            const allMessages = [...(currentConnPrev.messages || []), ...newMessages];
+            const uniqueMessagesMap = new Map();
+            allMessages.forEach(m => {
+              if (m && m.id) {
+                uniqueMessagesMap.set(m.id, m);
+              }
+            });
+            const updatedMessages = Array.from(uniqueMessagesMap.values()).sort((a: any, b: any) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
 
             let isNearBottom = true;
             if (scrollContainerRef.current) {
@@ -204,7 +213,17 @@ export function Connections() {
     const sentMessage = await connectionService.sendChatMessage(activeConn.userId, messageInput);
     if (sentMessage) {
       const updated = connected.map(c => {
-        if (c.id === activeChatId) return { ...c, messages: [...(c.messages||[]), sentMessage] };
+        if (c.id === activeChatId) {
+          const allMessages = [...(c.messages||[]), sentMessage];
+          const uniqueMessagesMap = new Map();
+          allMessages.forEach(m => {
+            if (m && m.id) uniqueMessagesMap.set(m.id, m);
+          });
+          const updatedMessages = Array.from(uniqueMessagesMap.values()).sort((a: any, b: any) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          return { ...c, messages: updatedMessages };
+        }
         return c;
       });
       setConnected(updated);

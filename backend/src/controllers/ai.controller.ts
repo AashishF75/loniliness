@@ -14,7 +14,7 @@ export const recommend = async (req: Request, res: Response): Promise<void> => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     console.log('[AI Route] Gemini client initialized');
 
     const prompt = `
