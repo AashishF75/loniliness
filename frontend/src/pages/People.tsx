@@ -94,14 +94,7 @@ export function People() {
     setConnectedIds(prev => [...prev, person.id]);
   };
 
-  const calculateMatch = (profileInterests: string[]) => {
-    const shared = profileInterests.filter(i => userInterests.includes(i));
-    let percent = 55;
-    if (shared.length === 1) percent = 70;
-    else if (shared.length === 2) percent = 85;
-    else if (shared.length >= 3) percent = 95;
-    return { percent, shared };
-  };
+
 
   return (
     <div className="flex flex-col gap-6 md:gap-8 pb-8">
@@ -191,7 +184,7 @@ export function People() {
 
       <div className="flex flex-col gap-6">
         {people.map(profile => {
-          const { percent } = calculateMatch(profile.interests);
+          const percent = profile.matchScore !== undefined ? `${profile.matchScore}% Match` : 'Profile Match: —';
           const isConnected = connectedIds.includes(profile.id);
           const isLoading = loadingIds.includes(profile.id);
           
@@ -215,7 +208,7 @@ export function People() {
                   </div>
                   <div className="flex items-center gap-2 text-xl font-extrabold text-brand-800 bg-brand-100 px-5 py-2.5 rounded-2xl border border-brand-200">
                     <Sparkles className="w-6 h-6 text-brand-600" />
-                    {percent}% Match
+                    {percent}
                   </div>
                 </div>
 

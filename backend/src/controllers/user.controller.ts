@@ -114,10 +114,41 @@ export const getNearbyUsers = async (req: Request | any, res: Response): Promise
 
       const userHobbyNames = user.hobbies ? user.hobbies.map((h:any) => h.name) : [];
 
+      let interestScore = 0;
+      if (currentUserHobbies.length > 0 && userHobbyNames.length > 0) {
+        const shared = userHobbyNames.filter((h: string) => currentUserHobbies.includes(h));
+        const union = new Set([...currentUserHobbies, ...userHobbyNames]);
+        interestScore = (shared.length / union.size) * 100;
+      } else if (currentUserHobbies.length === 0 && userHobbyNames.length === 0) {
+        interestScore = 50; // Neutral if both have no interests
+      }
+
+      let locationScore = Math.max(0, 100 - (distance / 10) * 100);
+
+      let ageScore = 0;
+      let ageWeight = 0;
+      let interestWeight = 0.70;
+      let locationWeight = 0.30;
+
+      if (currentUser.age && user.age) {
+        const diff = Math.abs(currentUser.age - user.age);
+        ageScore = Math.max(0, 100 - (diff / 20) * 100);
+        ageWeight = 0.15;
+        interestWeight = 0.60;
+        locationWeight = 0.25;
+      }
+
+      const matchScore = Math.round(
+        (interestScore * interestWeight) +
+        (locationScore * locationWeight) +
+        (ageScore * ageWeight)
+      );
+
       return {
         ...safeUser,
         interests: userHobbyNames,
-        distance: parseFloat(distance.toFixed(1))
+        distance: parseFloat(distance.toFixed(1)),
+        matchScore
       };
     }).filter((user: any) => {
       if (user.distance > maxRadius) return false;

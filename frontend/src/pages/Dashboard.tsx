@@ -24,18 +24,33 @@ export function Dashboard() {
     fetchData();
   }, []);
 
-  const today = new Date().toLocaleDateString('en-US', {
+  const getGreeting = () => {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      hourCycle: 'h23'
+    });
+    const istHour = parseInt(formatter.format(new Date()), 10);
+
+    if (istHour >= 5 && istHour < 12) return 'Good Morning';
+    if (istHour >= 12 && istHour < 17) return 'Good Afternoon';
+    if (istHour >= 17 && istHour < 21) return 'Good Evening';
+    return 'Good Night';
+  };
+
+  const today = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
     weekday: 'long',
     month: 'long',
     day: 'numeric'
-  });
+  }).format(new Date());
 
   return (
     <div className="flex flex-col gap-6 md:gap-8 pb-8">
       {/* Header Profile Section */}
       <div className="flex items-center justify-between bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
         <div className="flex flex-col">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">Good Morning, {userData.name}</h1>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">{getGreeting()}, {userData.name}</h1>
           <p className="text-xl text-gray-500 mt-1 font-medium">{today}</p>
           <div className="flex items-center gap-2 mt-4 text-brand-700 font-bold text-xl">
             <MapPin className="w-6 h-6" />

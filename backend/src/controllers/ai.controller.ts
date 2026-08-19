@@ -49,9 +49,9 @@ Return ONLY valid JSON.
 
     console.log('[AI Route] Sending request to Gemini API...');
 
-    // Implement a 10-second timeout to prevent hanging requests
+    // Implement a 30-second timeout to prevent hanging requests
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 10000);
+      setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 30000);
     });
 
     const result: any = await Promise.race([

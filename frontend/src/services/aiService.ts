@@ -42,11 +42,12 @@ export const aiService = {
       }
       
       throw new Error('Invalid AI response');
-    } catch (err) {
+    } catch (err: any) {
       console.error('AI Service Error:', err);
-      // Fallback response if API fails
+      // Surface actual backend error to the UI instead of swallowing it
+      const errorMessage = err?.message || "I'm having trouble connecting right now, but I'm still here for you. Please try again in a moment.";
       return {
-        content: "I'm having trouble connecting right now, but I'm still here for you. Please try again in a moment.",
+        content: errorMessage,
         recommendations: []
       };
     }
