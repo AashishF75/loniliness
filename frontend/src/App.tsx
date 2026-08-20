@@ -7,6 +7,7 @@ import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Onboarding } from './pages/Onboarding';
+import { LanguageSelection } from './pages/LanguageSelection';
 import { Dashboard } from './pages/Dashboard';
 import { People } from './pages/People';
 import { Activities } from './pages/Activities';
@@ -36,8 +37,9 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/language-selection" element={<LanguageSelection />} />
           <Route path="/onboarding" element={<Onboarding />} />
-          
+
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/people" element={<People />} />

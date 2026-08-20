@@ -5,9 +5,11 @@ import { Button } from '../components/ui/Button';
 import { adminService } from '../services/adminService';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '../services/userService';
+import { useTranslation } from 'react-i18next';
 
 export function AdminDashboard() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
@@ -48,7 +50,7 @@ export function AdminDashboard() {
       setEvents(eventsData);
     } catch (err) {
       console.error('Failed to load admin data', err);
-      setError('Failed to load dashboard data. Please try again.');
+      setError(t('admin.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -65,7 +67,7 @@ export function AdminDashboard() {
   };
 
   const handleSuspendUser = async (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to suspend ${name}?\nThey will no longer be able to access Saathi.`)) {
+    if (window.confirm(t('admin.suspendConfirm', { name }))) {
       try {
         await adminService.suspendUser(id);
         setUsers(users.map(u => u.id === id ? { ...u, status: 'SUSPENDED' } : u));
@@ -85,7 +87,7 @@ export function AdminDashboard() {
   };
 
   const handleRemoveEvent = async (id: string, title: string) => {
-    if (window.confirm(`Are you sure you want to remove the event "${title}"?\nThis event will no longer be visible to users.`)) {
+    if (window.confirm(t('admin.removeEventConfirm', { title }))) {
       try {
         await adminService.removeEvent(id);
         setEvents(events.map(e => e.id === id ? { ...e, status: 'REMOVED' } : e));
@@ -114,7 +116,7 @@ export function AdminDashboard() {
       <div className="flex flex-col justify-center items-center py-20 gap-4">
         <AlertTriangle className="w-16 h-16 text-red-500" />
         <p className="text-xl text-gray-700 font-bold">{error}</p>
-        <Button onClick={() => { setLoading(true); setError(null); loadData(); }}>Try Again</Button>
+        <Button onClick={() => { setLoading(true); setError(null); loadData(); }}>{t('admin.tryAgain')}</Button>
       </div>
     );
   }
@@ -125,19 +127,19 @@ export function AdminDashboard() {
         <div>
           <h1 className="text-3xl md:text-5xl font-extrabold mb-3 flex items-center gap-3">
             <Shield className="w-8 h-8 md:w-12 md:h-12 text-brand-400" />
-            Admin Dashboard
+            {t('admin.adminDashboard')}
           </h1>
-          <p className="text-xl md:text-2xl text-slate-300 font-medium">Platform moderation & analytics.</p>
+          <p className="text-xl md:text-2xl text-slate-300 font-medium">{t('admin.platformModeration')}</p>
         </div>
       </div>
 
       <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide">
-        <Button variant={activeTab === 'overview' ? 'primary' : 'outline'} onClick={() => setActiveTab('overview')} className="whitespace-nowrap">Overview</Button>
-        <Button variant={activeTab === 'users' ? 'primary' : 'outline'} onClick={() => setActiveTab('users')} className="whitespace-nowrap">Manage Users</Button>
+        <Button variant={activeTab === 'overview' ? 'primary' : 'outline'} onClick={() => setActiveTab('overview')} className="whitespace-nowrap">{t('admin.overview')}</Button>
+        <Button variant={activeTab === 'users' ? 'primary' : 'outline'} onClick={() => setActiveTab('users')} className="whitespace-nowrap">{t('admin.manageUsers')}</Button>
         <Button variant={activeTab === 'reports' ? 'primary' : 'outline'} onClick={() => setActiveTab('reports')} className="whitespace-nowrap">
-          Reports {stats?.pendingReports > 0 && <span className="ml-2 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">{stats.pendingReports}</span>}
+          {t('admin.reports')} {stats?.pendingReports > 0 && <span className="ml-2 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">{stats.pendingReports}</span>}
         </Button>
-        <Button variant={activeTab === 'events' ? 'primary' : 'outline'} onClick={() => setActiveTab('events')} className="whitespace-nowrap">Event Moderation</Button>
+        <Button variant={activeTab === 'events' ? 'primary' : 'outline'} onClick={() => setActiveTab('events')} className="whitespace-nowrap">{t('admin.eventModeration')}</Button>
       </div>
 
       {activeTab === 'overview' && (
@@ -145,45 +147,45 @@ export function AdminDashboard() {
           <Card className="p-6 bg-white border-l-4 border-l-brand-500">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-500 font-bold mb-1">Total Users</p>
+                <p className="text-gray-500 font-bold mb-1">{t('admin.totalUsers')}</p>
                 <h3 className="text-3xl font-extrabold text-gray-900">{stats?.totalUsers}</h3>
               </div>
               <div className="p-3 bg-brand-50 rounded-xl"><Users className="w-6 h-6 text-brand-600" /></div>
             </div>
-            <p className="text-sm text-green-600 font-medium mt-4">+{stats?.newUsers} in last 7 days</p>
+            <p className="text-sm text-green-600 font-medium mt-4">{t('admin.inLast7Days', { count: stats?.newUsers })}</p>
           </Card>
 
           <Card className="p-6 bg-white border-l-4 border-l-red-500">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-500 font-bold mb-1">Pending Reports</p>
+                <p className="text-gray-500 font-bold mb-1">{t('admin.pendingReports')}</p>
                 <h3 className="text-3xl font-extrabold text-gray-900">{stats?.pendingReports}</h3>
               </div>
               <div className="p-3 bg-red-50 rounded-xl"><AlertTriangle className="w-6 h-6 text-red-600" /></div>
             </div>
-            <p className="text-sm text-gray-500 font-medium mt-4">{stats?.resolvedReports} resolved total</p>
+            <p className="text-sm text-gray-500 font-medium mt-4">{t('admin.resolvedTotal', { count: stats?.resolvedReports })}</p>
           </Card>
 
           <Card className="p-6 bg-white border-l-4 border-l-blue-500">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-500 font-bold mb-1">Connections</p>
+                <p className="text-gray-500 font-bold mb-1">{t('admin.connections')}</p>
                 <h3 className="text-3xl font-extrabold text-gray-900">{stats?.totalConnections}</h3>
               </div>
               <div className="p-3 bg-blue-50 rounded-xl"><Link2 className="w-6 h-6 text-blue-600" /></div>
             </div>
-            <p className="text-sm text-gray-500 font-medium mt-4">Active friendships</p>
+            <p className="text-sm text-gray-500 font-medium mt-4">{t('admin.activeFriendships')}</p>
           </Card>
 
           <Card className="p-6 bg-white border-l-4 border-l-emerald-500">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-500 font-bold mb-1">Events</p>
+                <p className="text-gray-500 font-bold mb-1">{t('admin.events')}</p>
                 <h3 className="text-3xl font-extrabold text-gray-900">{stats?.totalEvents}</h3>
               </div>
               <div className="p-3 bg-emerald-50 rounded-xl"><Calendar className="w-6 h-6 text-emerald-600" /></div>
             </div>
-            <p className="text-sm text-gray-500 font-medium mt-4">{stats?.eventParticipants} total participants</p>
+            <p className="text-sm text-gray-500 font-medium mt-4">{t('admin.totalParticipants', { count: stats?.eventParticipants })}</p>
           </Card>
         </div>
       )}
@@ -191,22 +193,22 @@ export function AdminDashboard() {
       {activeTab === 'users' && (
         <Card className="p-6">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">Platform Users</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('admin.platformUsers')}</h2>
             <div className="flex gap-3 w-full sm:w-auto">
-              <select 
+              <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-gray-700 bg-white"
               >
-                <option value="ALL">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="SUSPENDED">Suspended</option>
+                <option value="ALL">{t('admin.allStatus')}</option>
+                <option value="ACTIVE">{t('admin.active')}</option>
+                <option value="SUSPENDED">{t('admin.suspended')}</option>
               </select>
               <div className="relative flex-1 sm:w-64">
                 <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search users..." 
+                <input
+                  type="text"
+                  placeholder={t('admin.searchUsers')}
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none"
@@ -219,11 +221,11 @@ export function AdminDashboard() {
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-gray-200 text-gray-500">
-                  <th className="p-3 font-semibold">User</th>
-                  <th className="p-3 font-semibold">Role</th>
-                  <th className="p-3 font-semibold">Status</th>
-                  <th className="p-3 font-semibold">Joined</th>
-                  <th className="p-3 font-semibold">Actions</th>
+                  <th className="p-3 font-semibold">{t('admin.user')}</th>
+                  <th className="p-3 font-semibold">{t('admin.role')}</th>
+                  <th className="p-3 font-semibold">{t('admin.status')}</th>
+                  <th className="p-3 font-semibold">{t('admin.joined')}</th>
+                  <th className="p-3 font-semibold">{t('admin.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -241,7 +243,7 @@ export function AdminDashboard() {
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center w-fit gap-1 ${u.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        {u.status === 'ACTIVE' ? 'Active' : 'Suspended'}
+                        {u.status === 'ACTIVE' ? t('admin.active') : t('admin.suspended')}
                       </span>
                     </td>
                     <td className="p-3 text-gray-600">{new Date(u.createdAt).toLocaleDateString()}</td>
@@ -250,11 +252,11 @@ export function AdminDashboard() {
                         {u.role !== 'ADMIN' && (
                           u.status === 'ACTIVE' ? (
                             <Button variant="outline" className="border-red-500 text-red-600 hover:bg-red-50 py-1 h-8 text-xs" onClick={() => handleSuspendUser(u.id, u.name)}>
-                              Suspend
+                              {t('admin.suspend')}
                             </Button>
                           ) : (
                             <Button variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 py-1 h-8 text-xs" onClick={() => handleActivateUser(u.id)}>
-                              Activate
+                              {t('admin.activate')}
                             </Button>
                           )
                         )}
@@ -270,9 +272,9 @@ export function AdminDashboard() {
 
       {activeTab === 'reports' && (
         <div className="flex flex-col gap-4">
-          <h2 className="text-2xl font-bold text-gray-900 px-2">Moderation Reports</h2>
+          <h2 className="text-2xl font-bold text-gray-900 px-2">{t('admin.moderationReports')}</h2>
           {reports.length === 0 ? (
-            <Card className="p-8 text-center text-gray-500">No reports found.</Card>
+            <Card className="p-8 text-center text-gray-500">{t('admin.noReportsFound')}</Card>
           ) : (
             reports.map(report => (
               <Card key={report.id} className={`p-6 border-l-4 ${report.status === 'PENDING' ? 'border-l-red-500 bg-red-50/20' : 'border-l-green-500 bg-white'}`}>
@@ -284,30 +286,30 @@ export function AdminDashboard() {
                       </span>
                       <span className="text-gray-400 text-sm">{new Date(report.createdAt).toLocaleString()}</span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">Reason: {report.reason}</h3>
-                    <p className="text-gray-700 mb-4">{report.description || 'No description provided.'}</p>
-                    
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{t('admin.reasonLabel', { reason: report.reason })}</h3>
+                    <p className="text-gray-700 mb-4">{report.description || t('admin.noDescription')}</p>
+
                     <div className="text-sm bg-white p-3 rounded-xl border border-gray-200 inline-block">
-                      <span className="text-gray-500">Reported User: </span>
+                      <span className="text-gray-500">{t('admin.reportedUser')} </span>
                       <span className="font-bold text-gray-900 mr-4">{report.reportedUser?.name}</span>
-                      <span className="text-gray-500">Reporter: </span>
+                      <span className="text-gray-500">{t('admin.reporter')} </span>
                       <span className="font-bold text-gray-900">{report.reporter?.name}</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex md:flex-col gap-2 shrink-0 self-start md:self-stretch justify-center">
                     {report.status === 'PENDING' && (
                       <>
                         <Button onClick={() => handleResolveReport(report.id, 'RESOLVED')} className="bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white shadow-sm py-1 h-auto text-sm">
-                          Resolve
+                          {t('admin.resolve')}
                         </Button>
                         <Button variant="outline" onClick={() => handleResolveReport(report.id, 'DISMISSED')} className="py-1 h-auto text-sm">
-                          Dismiss
+                          {t('admin.dismiss')}
                         </Button>
                       </>
                     )}
                     <Button variant="outline" className="border-red-500 text-red-600 hover:bg-red-50 py-1 h-auto text-sm mt-auto" onClick={() => handleSuspendUser(report.reportedUser?.id, report.reportedUser?.name)}>
-                      Suspend User
+                      {t('admin.suspendUser')}
                     </Button>
                   </div>
                 </div>
@@ -319,12 +321,12 @@ export function AdminDashboard() {
       {activeTab === 'events' && (
         <Card className="p-6">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">Event Moderation</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('admin.eventModeration')}</h2>
           </div>
 
           <div className="flex flex-col gap-4">
             {events.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">No events found.</div>
+              <div className="text-center text-gray-500 py-8">{t('admin.noEventsFound')}</div>
             ) : (
               events.map(event => (
                 <div key={event.id} className="border border-gray-200 rounded-xl p-4 flex flex-col md:flex-row justify-between gap-4">
@@ -338,23 +340,23 @@ export function AdminDashboard() {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 mb-1">{event.title}</h3>
                     <div className="text-sm text-gray-600 mb-2 flex items-center gap-2">
-                      <span>By: <span className="font-bold">{event.creator?.name}</span></span>
+                      <span>{t('admin.by')}<span className="font-bold">{event.creator?.name}</span></span>
                       <span>•</span>
                       <span>{event.location}</span>
                     </div>
                     <p className="text-sm text-gray-500 line-clamp-2">{event.description}</p>
                     <div className="mt-3 text-xs font-bold text-gray-500">
-                      {event._count?.participants} / {event.maxParticipants} participants
+                      {t('admin.participantsCount', { count: event._count?.participants, max: event.maxParticipants })}
                     </div>
                   </div>
                   <div className="flex md:flex-col justify-end md:justify-center shrink-0">
                     {event.status !== 'REMOVED' ? (
                       <Button variant="outline" className="border-red-500 text-red-600 hover:bg-red-50 text-sm" onClick={() => handleRemoveEvent(event.id, event.title)}>
-                        Remove Event
+                        {t('admin.removeEvent')}
                       </Button>
                     ) : (
                       <span className="text-sm font-bold text-red-500 bg-red-50 px-4 py-2 rounded-xl text-center">
-                        Removed
+                        {t('admin.removed')}
                       </span>
                     )}
                   </div>

@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { aiService } from '../services/aiService';
+import { useTranslation } from 'react-i18next';
 
 interface Message {
   id: string;
@@ -18,33 +19,32 @@ interface Recommendation {
   stat: string;
 }
 
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: '1',
-    role: 'user',
-    content: "I'm feeling lonely."
-  },
-  {
-    id: '2',
-    role: 'assistant',
-    content: "I'm here with you. I found some people and activities nearby that match your interests.",
-    recommendations: [
-      { title: 'Morning Walk', subtitle: 'Community Park', stat: '3 people nearby' },
-      { title: 'Suresh (Age 65)', subtitle: '0.8 km away', stat: '2 shared interests' }
-    ]
-  }
-];
-
-const SUGGESTIONS = [
-  "Find people near me",
-  "Find activities",
-  "I'm feeling lonely",
-  "I like gardening",
-  "What can I do today?"
-];
+// INITIAL_MESSAGES is moved inside the component to access the translation function `t`
 
 export function AiCompanion() {
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const { t } = useTranslation();
+  const SUGGESTIONS = [
+    t('dashboard.findPeopleNearMe'),
+    t('dashboard.findActivities'),
+    t('dashboard.lonely'),
+    t('dashboard.whatCanIDoToday')
+  ];
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      role: 'user',
+      content: t('aiCompanion.initialLonely')
+    },
+    {
+      id: '2',
+      role: 'assistant',
+      content: t('aiCompanion.initialResponse'),
+      recommendations: [
+        { title: 'Morning Walk', subtitle: 'Community Park', stat: '3 people nearby' },
+        { title: 'Suresh (Age 65)', subtitle: '0.8 km away', stat: '2 shared interests' }
+      ]
+    }
+  ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -67,7 +67,7 @@ export function AiCompanion() {
 
     try {
       const response = await aiService.sendMessage(text);
-      
+
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -78,7 +78,7 @@ export function AiCompanion() {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I'm having a little trouble connecting right now, but I'm still here for you. Please try again in a moment."
+        content: t('aiCompanion.errorResponse')
       }]);
     } finally {
       setIsLoading(false);
@@ -94,8 +94,8 @@ export function AiCompanion() {
             <Sparkles className="w-10 h-10" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold mb-1">Saathi AI</h1>
-            <p className="text-brand-100 text-lg font-medium leading-tight">Your companion for finding people and activities nearby.</p>
+            <h1 className="text-3xl font-extrabold mb-1">{t('aiCompanion.saathiAi')}</h1>
+            <p className="text-brand-100 text-lg font-medium leading-tight">{t('aiCompanion.companionDesc')}</p>
           </div>
         </div>
       </div>
@@ -105,7 +105,7 @@ export function AiCompanion() {
         {messages.map(msg => (
           <div key={msg.id} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`flex gap-4 w-full md:max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-              
+
               <div className={`w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center shadow-sm ${
                 msg.role === 'user' ? 'bg-gray-300 text-gray-700' : 'bg-brand-200 text-brand-700'
               }`}>
@@ -114,8 +114,8 @@ export function AiCompanion() {
 
               <div className={`flex flex-col gap-4 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className={`p-5 rounded-3xl text-xl leading-relaxed break-words ${
-                  msg.role === 'user' 
-                    ? 'bg-gray-900 text-white rounded-tr-none shadow-md' 
+                  msg.role === 'user'
+                    ? 'bg-gray-900 text-white rounded-tr-none shadow-md'
                     : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-md'
                 }`}>
                   {msg.content}
@@ -152,7 +152,7 @@ export function AiCompanion() {
                     <span className="w-2 h-2 bg-brand-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
                     <span className="w-2 h-2 bg-brand-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                   </span>
-                  <span className="text-gray-500 text-lg font-medium ml-2">Saathi is typing...</span>
+                  <span className="text-gray-500 text-lg font-medium ml-2">{t('aiCompanion.saathiTyping')}</span>
                 </div>
               </div>
             </div>
@@ -175,9 +175,9 @@ export function AiCompanion() {
             </button>
           ))}
         </div>
-        
-        <form 
-          onSubmit={(e) => { e.preventDefault(); handleSend(input); }} 
+
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleSend(input); }}
           className="flex gap-3 mt-2"
         >
           <div className="flex-1">
@@ -185,7 +185,7 @@ export function AiCompanion() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message here..."
+              placeholder={t('connections.typeYourMessage')}
               className="flex w-full h-16 rounded-2xl border-2 border-gray-300 bg-gray-50 px-5 text-xl transition-colors placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
             />
           </div>

@@ -1,31 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar, Link2, XCircle, Shield } from 'lucide-react';
+import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar, Link2, XCircle, Shield, Globe, ChevronDown } from 'lucide-react';
 import { notificationService } from '../../services/notificationService';
 import { connectionService } from '../../services/connectionService';
+import { useTranslation } from 'react-i18next';
 
 export function RootLayout() {
   const location = useLocation();
+  const { t, i18n } = useTranslation();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const langMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchNotifications = async () => {
       const token = localStorage.getItem('saathi_auth_token');
       if (!token) return;
-      
+
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
-      
+
       if (showNotifications) {
         const list = await notificationService.getNotifications();
         setNotifications(list);
       }
     };
-    
+
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 10000); // polling
     return () => clearInterval(interval);
@@ -35,6 +39,9 @@ export function RootLayout() {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
+      }
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
+        setShowLangMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -62,7 +69,7 @@ export function RootLayout() {
       await connectionService.updateConnectionStatus(notif.relatedConnectionId, 'ACCEPTED');
       window.dispatchEvent(new Event('connections_updated'));
       await notificationService.markAsRead(notif.id);
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true, type: 'CONNECTION_ACCEPTED', message: 'You accepted the connection request.' } : n));
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true, type: 'CONNECTION_ACCEPTED', message: t('layout.acceptedRequest') } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     }
   };
@@ -83,7 +90,7 @@ export function RootLayout() {
     if (!notif.isRead && notif.type !== 'NEW_CONNECTION_REQUEST') {
       handleMarkAsRead(notif.id, { preventDefault: () => {}, stopPropagation: () => {} } as any);
     }
-    
+
     if (notif.type.startsWith('EVENT_')) {
       setShowNotifications(false);
       navigate('/events');
@@ -91,16 +98,16 @@ export function RootLayout() {
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Home', icon: Home },
-    { path: '/people', label: 'People', icon: Users },
-    { path: '/connections', label: 'Connections', icon: Link2 },
-    { path: '/events', label: 'Events', icon: Calendar },
-    { path: '/activities', label: 'Activities', icon: Calendar },
-    { path: '/ai-companion', label: 'Saathi', icon: MessageCircle },
-    { path: '/family', label: 'Family', icon: Heart },
+    { path: '/dashboard', label: t('layout.navHome'), icon: Home },
+    { path: '/people', label: t('layout.navPeople'), icon: Users },
+    { path: '/connections', label: t('layout.navConnections'), icon: Link2 },
+    { path: '/events', label: t('layout.navEvents'), icon: Calendar },
+    { path: '/activities', label: t('layout.navActivities'), icon: Calendar },
+    { path: '/ai-companion', label: t('layout.navSaathi'), icon: MessageCircle },
+    { path: '/family', label: t('layout.navFamily'), icon: Heart },
   ];
 
-  const hideNav = ['/', '/login', '/register', '/onboarding'].includes(location.pathname);
+  const hideNav = ['/', '/login', '/register', '/onboarding', '/language-selection'].includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 pb-24 md:pb-0 font-sans">
@@ -111,7 +118,7 @@ export function RootLayout() {
               <span className="w-12 h-12 bg-brand-600 text-white rounded-2xl flex items-center justify-center text-3xl shadow-sm">S</span>
               <span className="hidden sm:inline">Saathi</span>
             </Link>
-            
+
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-2 lg:gap-6">
               {navItems.map((item) => {
@@ -122,8 +129,8 @@ export function RootLayout() {
                     key={item.path}
                     to={item.path}
                     className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-colors font-bold text-lg ${
-                      isActive 
-                        ? 'bg-brand-50 text-brand-700' 
+                      isActive
+                        ? 'bg-brand-50 text-brand-700'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                   >
@@ -134,7 +141,48 @@ export function RootLayout() {
               })}
             </nav>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="relative" ref={langMenuRef}>
+                <button
+                  onClick={() => setShowLangMenu(!showLangMenu)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  <Globe className="w-4 h-4 text-brand-600" />
+                  <span className="hidden sm:inline">
+                    {{'en':'English', 'hi':'हिन्दी', 'te':'తెలుగు', 'ml':'മലയാളം', 'bho':'भोजपुरी'}[i18n.language || 'en'] || 'English'}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-gray-400" />
+                </button>
+
+                {showLangMenu && (
+                  <div className="absolute right-0 mt-2 w-32 rounded-xl shadow-xl overflow-hidden border bg-white border-gray-100 z-[100]">
+                    {[
+                      { code: 'en', name: 'English' },
+                      { code: 'hi', name: 'हिन्दी' },
+                      { code: 'te', name: 'తెలుగు' },
+                      { code: 'ml', name: 'മലയാളം' },
+                      { code: 'bho', name: 'भोजपुरी' }
+                    ].map((lang) => (
+                      <button
+                        key={lang.code}
+                        className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
+                          (i18n.language || 'en') === lang.code
+                            ? 'bg-brand-50 text-brand-700'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                        onClick={() => {
+                          i18n.changeLanguage(lang.code);
+                          localStorage.setItem('saathi_language', lang.code);
+                          setShowLangMenu(false);
+                        }}
+                      >
+                        {lang.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
@@ -151,22 +199,22 @@ export function RootLayout() {
                 {showNotifications && (
                   <div className="fixed top-20 left-4 right-4 sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:mt-2 w-auto sm:w-80 md:w-96 bg-white border border-gray-200 shadow-xl rounded-2xl overflow-hidden z-[100] flex flex-col max-h-[70vh] sm:max-h-[80vh]">
                     <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
-                      <h3 className="font-bold text-lg text-gray-800">Notifications</h3>
+                      <h3 className="font-bold text-lg text-gray-800">{t('layout.notifications')}</h3>
                       {unreadCount > 0 && (
                         <button onClick={handleMarkAllAsRead} className="text-sm font-semibold text-brand-600 hover:text-brand-800">
-                          Mark all as read
+                          {t('layout.markAllAsRead')}
                         </button>
                       )}
                     </div>
                     <div className="overflow-y-auto flex-1 p-2">
                       {notifications.length === 0 ? (
                         <div className="p-6 text-center text-gray-500 font-medium">
-                          No notifications yet.
+                          {t('layout.noNotifications')}
                         </div>
                       ) : (
                         notifications.map((notif: any) => (
-                          <div 
-                            key={notif.id} 
+                          <div
+                            key={notif.id}
                             onClick={() => handleNotificationClick(notif)}
                             className={`p-4 mb-2 rounded-xl flex gap-3 transition-colors ${notif.type.startsWith('EVENT_') ? 'cursor-pointer ' : ''}${
                               notif.isRead ? 'bg-white hover:bg-gray-50' : 'bg-brand-50 hover:bg-brand-100'
@@ -191,16 +239,16 @@ export function RootLayout() {
                               </span>
                               {(notif.type === 'NEW_CONNECTION_REQUEST' && notif.connectionStatus === 'PENDING') && (
                                 <div className="flex gap-2 mt-3">
-                                  <button onClick={(e) => handleAcceptConnection(notif, e)} className="px-4 py-1.5 bg-brand-600 text-white rounded-lg font-bold text-sm hover:bg-brand-700 transition-colors">Accept</button>
-                                  <button onClick={(e) => handleRejectConnection(notif, e)} className="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-300 transition-colors">Reject</button>
+                                  <button onClick={(e) => handleAcceptConnection(notif, e)} className="px-4 py-1.5 bg-brand-600 text-white rounded-lg font-bold text-sm hover:bg-brand-700 transition-colors">{t('layout.accept')}</button>
+                                  <button onClick={(e) => handleRejectConnection(notif, e)} className="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-300 transition-colors">{t('layout.reject')}</button>
                                 </div>
                               )}
                             </div>
                             {!notif.isRead && notif.type !== 'NEW_CONNECTION_REQUEST' && (
-                              <button 
+                              <button
                                 onClick={(e) => handleMarkAsRead(notif.id, e)}
                                 className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/50 text-gray-500 hover:text-brand-600"
-                                title="Mark as read"
+                                title={t('layout.markAsRead')}
                               >
                                 <Check className="w-5 h-5" />
                               </button>
@@ -214,7 +262,7 @@ export function RootLayout() {
               </div>
 
               <Link to="/profile" className="p-2 md:p-3 rounded-full hover:bg-gray-100 flex items-center gap-2 transition-colors">
-                <span className="hidden sm:inline font-bold text-gray-700 text-lg">Profile</span>
+                <span className="hidden sm:inline font-bold text-gray-700 text-lg">{t('layout.profile')}</span>
                 <User className="w-8 h-8 text-gray-700 bg-gray-100 rounded-full p-1 border-2 border-gray-200" />
               </Link>
             </div>

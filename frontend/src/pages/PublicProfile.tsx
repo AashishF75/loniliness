@@ -6,11 +6,13 @@ import { Button } from '../components/ui/Button';
 import { userService } from '../services/userService';
 import { connectionService } from '../services/connectionService';
 import { safetyService } from '../services/safetyService';
+import { useTranslation } from 'react-i18next';
 
 export function PublicProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const distance = location.state?.distance; // Distance passed from People page
 
   const [profile, setProfile] = useState<any>(null);
@@ -20,7 +22,7 @@ export function PublicProfile() {
   const [isSending, setIsSending] = useState(false);
   const [userInterests, setUserInterests] = useState<string[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
-  
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('Harassment');
   const [reportDescription, setReportDescription] = useState('');
@@ -38,7 +40,7 @@ export function PublicProfile() {
         ]);
 
         if (!publicProfile) {
-          setErrorMsg('Profile not found.');
+          setErrorMsg(t('publicProfile.profileNotFound'));
         } else {
           setProfile(publicProfile);
         }
@@ -54,10 +56,10 @@ export function PublicProfile() {
 
         if (isAccepted) setConnectionStatus('CONNECTED');
         else if (isPending) setConnectionStatus('PENDING');
-        
+
         setIsConnected(isAccepted || isPending);
       } catch (err: any) {
-        setErrorMsg('Failed to load profile.');
+        setErrorMsg(t('publicProfile.profileNotFound'));
       } finally {
         setLoading(false);
       }
@@ -78,13 +80,13 @@ export function PublicProfile() {
 
   const handleBlock = async () => {
     if (!profile) return;
-    if (window.confirm(`Are you sure you want to block ${profile.name}? They will no longer be able to message you or see your profile.`)) {
+    if (window.confirm(t('publicProfile.blockConfirm', { name: profile.name }))) {
       try {
         await safetyService.blockUser(profile.id);
-        alert(`${profile.name} has been blocked.`);
+        alert(t('publicProfile.blockSuccess', { name: profile.name }));
         navigate('/people'); // Go back to people list after blocking
       } catch (err) {
-        alert('Failed to block user.');
+        alert(t('publicProfile.blockFailed'));
       }
     }
   };
@@ -94,11 +96,11 @@ export function PublicProfile() {
     setIsReporting(true);
     try {
       await safetyService.reportUser(profile.id, reportReason, reportDescription);
-      alert('Report submitted successfully. Thank you.');
+      alert(t('publicProfile.reportSuccess'));
       setShowReportModal(false);
       setReportDescription('');
     } catch (err) {
-      alert('Failed to submit report.');
+      alert(t('publicProfile.reportFailed'));
     } finally {
       setIsReporting(false);
     }
@@ -109,7 +111,7 @@ export function PublicProfile() {
       <div className="flex justify-center items-center py-20">
         <Card className="p-10 text-center bg-brand-50/50 border-brand-100 flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 text-brand-500 animate-spin" />
-          <p className="text-2xl font-bold text-brand-800">Loading profile...</p>
+          <p className="text-2xl font-bold text-brand-800">{t('publicProfile.loadingProfile')}</p>
         </Card>
       </div>
     );
@@ -119,10 +121,10 @@ export function PublicProfile() {
     return (
       <div className="flex flex-col items-center py-20 gap-6">
         <Card className="p-10 text-center bg-red-50 border-red-200">
-          <p className="text-2xl font-bold text-red-800">{errorMsg || 'Profile not found.'}</p>
+          <p className="text-2xl font-bold text-red-800">{errorMsg || t('publicProfile.profileNotFound')}</p>
         </Card>
         <Button onClick={() => navigate(-1)} size="lg" variant="outline">
-          <ArrowLeft className="w-5 h-5 mr-2" /> Go Back
+          <ArrowLeft className="w-5 h-5 mr-2" /> {t('publicProfile.goBack')}
         </Button>
       </div>
     );
@@ -139,12 +141,12 @@ export function PublicProfile() {
 
   return (
     <div className="max-w-4xl mx-auto pb-10 pt-16 md:pt-0">
-      <button 
-        onClick={() => navigate(-1)} 
+      <button
+        onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-brand-700 hover:text-brand-900 font-bold mb-6 transition-colors"
       >
         <ArrowLeft className="w-6 h-6" />
-        Back to People
+        {t('publicProfile.backToPeople')}
       </button>
 
       <Card className="overflow-hidden border-0 shadow-lg bg-white">
@@ -154,46 +156,46 @@ export function PublicProfile() {
             <div className="w-32 h-32 md:w-48 md:h-48 bg-brand-50 border-4 border-white shadow-xl rounded-full flex items-center justify-center shrink-0">
               <User className="w-16 h-16 md:w-24 md:h-24 text-brand-600" />
             </div>
-            
+
             <div className="flex-1 text-center md:text-left pb-2">
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight break-words">
                 {profile.name}
               </h1>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-4 mt-3">
                 <span className="text-base sm:text-xl font-medium text-gray-600 flex items-center gap-1">
-                  {profile.age !== null && profile.age !== undefined ? `Age ${profile.age}` : 'Age hidden'}
+                  {profile.age !== null && profile.age !== undefined ? t('publicProfile.ageVal', { age: profile.age }) : t('publicProfile.ageHidden')}
                 </span>
                 <span className="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>
                 <span className="text-base sm:text-xl font-medium text-gray-600 flex items-center gap-1">
                   <MapPin className="w-5 h-5" />
-                  {profile.locality || profile.city ? `${profile.locality ? profile.locality + ', ' : ''}${profile.city || ''}` : profile.city === null ? 'Location hidden' : 'Location not set'}
+                  {profile.locality || profile.city ? `${profile.locality ? profile.locality + ', ' : ''}${profile.city || ''}` : profile.city === null ? t('publicProfile.locationHidden') : t('publicProfile.locationNotSet')}
                 </span>
               </div>
             </div>
-            
+
             <div className="w-full md:w-auto shrink-0 pb-2">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className={`w-full md:w-48 h-16 text-xl font-bold shadow-md ${connectionStatus === 'CONNECTED' ? 'bg-green-100 text-green-800 border-2 border-green-500' : isConnected ? 'bg-gray-100 text-gray-800 border-2 border-gray-300' : ''}`}
                 onClick={handleConnect}
                 disabled={isConnected || isSending}
                 variant={connectionStatus === 'CONNECTED' ? 'outline' : isConnected ? 'outline' : 'primary'}
               >
-                {isSending ? 'Sending...' : connectionStatus === 'CONNECTED' ? 'Connected' : connectionStatus === 'PENDING' ? 'Request Sent' : 'Connect'}
+                {isSending ? t('publicProfile.sending') : connectionStatus === 'CONNECTED' ? t('publicProfile.connected') : connectionStatus === 'PENDING' ? t('publicProfile.requestSent') : t('publicProfile.connect')}
               </Button>
               <div className="flex gap-4 mt-2 justify-center md:justify-start">
-                <button 
+                <button
                   onClick={() => setShowReportModal(true)}
                   className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors underline"
                 >
-                  Report User
+                  {t('publicProfile.reportUser')}
                 </button>
                 <span className="text-gray-300">|</span>
-                <button 
+                <button
                   onClick={handleBlock}
                   className="text-sm font-medium text-red-500 hover:text-red-700 transition-colors underline"
                 >
-                  Block User
+                  {t('publicProfile.blockUser')}
                 </button>
               </div>
             </div>
@@ -203,22 +205,22 @@ export function PublicProfile() {
             <div className="md:col-span-2 space-y-6">
               {profile.bio && (
                 <div className="bg-slate-50 p-6 rounded-3xl border border-gray-100">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">About Me</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">{t('publicProfile.aboutMe')}</h3>
                   <p className="text-lg text-gray-700 leading-relaxed">{profile.bio}</p>
                 </div>
               )}
-              
+
               <div className="bg-slate-50 p-6 rounded-3xl border border-gray-100">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Interests</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">{t('publicProfile.interests')}</h3>
                 {profile.hobbies === undefined ? (
-                  <p className="text-lg text-gray-500 italic">Interests hidden</p>
+                  <p className="text-lg text-gray-500 italic">{t('publicProfile.interestsHidden')}</p>
                 ) : profileInterests.length > 0 ? (
                   <div className="flex flex-wrap gap-3">
                     {profileInterests.map((interest: string) => {
                       const isShared = shared.includes(interest);
                       return (
-                        <span 
-                          key={interest} 
+                        <span
+                          key={interest}
                           className={`px-4 py-2 rounded-xl text-lg font-medium flex items-center gap-2 ${
                             isShared ? 'bg-brand-600 text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-300'
                           }`}
@@ -230,7 +232,7 @@ export function PublicProfile() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-lg text-gray-500 italic">No interests specified yet.</p>
+                  <p className="text-lg text-gray-500 italic">{t('publicProfile.noInterests')}</p>
                 )}
               </div>
             </div>
@@ -242,8 +244,8 @@ export function PublicProfile() {
                     <MapPin className="w-6 h-6 text-brand-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-brand-600 uppercase tracking-wider">Distance</p>
-                    <p className="text-2xl font-extrabold text-gray-900">{distance} km</p>
+                    <p className="text-sm font-bold text-brand-600 uppercase tracking-wider">{t('publicProfile.distanceLabel')}</p>
+                    <p className="text-2xl font-extrabold text-gray-900">{t('publicProfile.distanceKm', { distance })}</p>
                   </div>
                 </div>
               )}
@@ -254,14 +256,14 @@ export function PublicProfile() {
                     <Sparkles className="w-6 h-6 text-brand-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-brand-600 uppercase tracking-wider">Compatibility</p>
-                    <p className="text-2xl font-extrabold text-gray-900">{profile.hobbies === undefined ? 'Hidden' : `${percent}% Match`}</p>
+                    <p className="text-sm font-bold text-brand-600 uppercase tracking-wider">{t('publicProfile.compatibility')}</p>
+                    <p className="text-2xl font-extrabold text-gray-900">{profile.hobbies === undefined ? t('publicProfile.hidden') : t('publicProfile.percentMatch', { percent })}</p>
                   </div>
                 </div>
-                
-                <h4 className="font-bold text-gray-900 mb-2">Common Interests</h4>
+
+                <h4 className="font-bold text-gray-900 mb-2">{t('publicProfile.commonInterests')}</h4>
                 {profile.hobbies === undefined ? (
-                  <p className="text-gray-600 italic">Interests hidden</p>
+                  <p className="text-gray-600 italic">{t('publicProfile.interestsHidden')}</p>
                 ) : shared.length > 0 ? (
                   <ul className="space-y-2">
                     {shared.map((s: string) => (
@@ -271,7 +273,7 @@ export function PublicProfile() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-gray-600 italic">You're still getting to know each other.</p>
+                  <p className="text-gray-600 italic">{t('publicProfile.gettingToKnow')}</p>
                 )}
               </div>
             </div>
@@ -283,38 +285,38 @@ export function PublicProfile() {
       {showReportModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <Card className="bg-white w-full max-w-md p-6 flex flex-col gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">Report {profile?.name}</h2>
-            <p className="text-gray-600">Please let us know why you are reporting this user. We will review this report and take appropriate action.</p>
-            
+            <h2 className="text-2xl font-bold text-gray-900">{t('publicProfile.reportName', { name: profile?.name })}</h2>
+            <p className="text-gray-600">{t('publicProfile.reportDesc')}</p>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-              <select 
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('publicProfile.reason')}</label>
+              <select
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
                 className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
-                <option value="Harassment">Harassment or Bullying</option>
-                <option value="Spam">Spam</option>
-                <option value="Fake Profile">Fake Profile</option>
-                <option value="Inappropriate Content">Inappropriate Content</option>
-                <option value="Other">Other</option>
+                <option value="Harassment">{t('publicProfile.harassment')}</option>
+                <option value="Spam">{t('publicProfile.spam')}</option>
+                <option value="Fake Profile">{t('publicProfile.fakeProfile')}</option>
+                <option value="Inappropriate Content">{t('publicProfile.inappropriateContent')}</option>
+                <option value="Other">{t('publicProfile.other')}</option>
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Details (Optional)</label>
-              <textarea 
-                value={reportDescription} 
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('publicProfile.detailsOptional')}</label>
+              <textarea
+                value={reportDescription}
                 onChange={e => setReportDescription(e.target.value)}
-                placeholder="Provide additional details..."
+                placeholder={t('publicProfile.provideDetails')}
                 className="flex w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 min-h-[100px]"
               />
             </div>
 
             <div className="flex justify-end gap-3 mt-4">
-              <Button variant="outline" onClick={() => setShowReportModal(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setShowReportModal(false)}>{t('publicProfile.cancel')}</Button>
               <Button onClick={handleReportSubmit} disabled={isReporting} className="bg-red-600 hover:bg-red-700 text-white border-red-600">
-                {isReporting ? 'Submitting...' : 'Submit Report'}
+                {isReporting ? t('publicProfile.submitting') : t('publicProfile.submitReport')}
               </Button>
             </div>
           </Card>

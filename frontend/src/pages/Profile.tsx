@@ -7,8 +7,10 @@ import { authService } from '../services/authService';
 import { safetyService } from '../services/safetyService';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
+import { useTranslation } from 'react-i18next';
 
 export function Profile() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -103,10 +105,10 @@ export function Profile() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 break-words">{user.name}</h1>
             <Button variant="outline" className="border-gray-200" onClick={handleEditClick}>
-              <Edit3 className="w-5 h-5 mr-2" /> Edit Profile
+              <Edit3 className="w-5 h-5 mr-2" /> {t('profile.editProfile')}
             </Button>
           </div>
-          <p className="text-2xl text-gray-500 font-medium">Age {user.age} • {user.city}</p>
+          <p className="text-2xl text-gray-500 font-medium">{t('profile.age')} {user.age} • {user.city}</p>
         </div>
       </div>
 
@@ -114,7 +116,7 @@ export function Profile() {
         <Card className="p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
             <Heart className="w-7 h-7 text-brand-600" />
-            My Interests
+            {t('profile.interests')}
           </h2>
           <div className="flex flex-wrap gap-3">
             {displayInterests.map((interest: string) => (
@@ -131,7 +133,7 @@ export function Profile() {
         <Card className="p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
             <Settings className="w-7 h-7 text-gray-600" />
-            Settings
+            {t('profile.settings')}
           </h2>
           <div className="flex flex-col gap-4">
             <Button variant="outline" className="justify-start h-16 text-base sm:text-xl bg-gray-50 border-gray-200 hover:bg-gray-100 min-w-0">
@@ -143,14 +145,14 @@ export function Profile() {
             <Button variant="outline" className="justify-start h-16 text-base sm:text-xl bg-gray-50 border-gray-200 hover:bg-gray-100 min-w-0" onClick={() => setShowBlockedUsers(true)}>
               <User className="w-5 h-5 sm:w-6 sm:h-6 mr-3 sm:mr-4 text-gray-600 shrink-0" /> <span className="truncate">Blocked Users ({blockedUsers.length})</span>
             </Button>
-            
+
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Privacy</h3>
-              
+              <h3 className="text-xl font-bold text-gray-900 mb-4">{t('profile.privacy')}</h3>
+
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
                   <span className="text-lg font-medium text-gray-700">Show my age</span>
-                  <Button 
+                  <Button
                     variant={user.showAge !== false ? "primary" : "outline"}
                     onClick={() => handlePrivacyToggle('showAge', user.showAge === false)}
                     className="w-24"
@@ -158,10 +160,10 @@ export function Profile() {
                     {user.showAge !== false ? 'ON' : 'OFF'}
                   </Button>
                 </div>
-                
+
                 <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
-                  <span className="text-lg font-medium text-gray-700">Show my location</span>
-                  <Button 
+                  <span className="text-lg font-medium text-gray-700">{t('profile.locationVisibility')}</span>
+                  <Button
                     variant={user.showLocation !== false ? "primary" : "outline"}
                     onClick={() => handlePrivacyToggle('showLocation', user.showLocation === false)}
                     className="w-24"
@@ -169,10 +171,10 @@ export function Profile() {
                     {user.showLocation !== false ? 'ON' : 'OFF'}
                   </Button>
                 </div>
-                
+
                 <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
                   <span className="text-lg font-medium text-gray-700">Show my interests</span>
-                  <Button 
+                  <Button
                     variant={user.showInterests !== false ? "primary" : "outline"}
                     onClick={() => handlePrivacyToggle('showInterests', user.showInterests === false)}
                     className="w-24"
@@ -197,19 +199,19 @@ export function Profile() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <Card className="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 flex flex-col gap-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-gray-900">Edit Profile</h2>
+              <h2 className="text-3xl font-bold text-gray-900">{t('profile.editProfile')}</h2>
               <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
                 <X className="w-6 h-6" />
               </Button>
             </div>
-            
+
             <div className="flex flex-col gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <Input value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.age')}</label>
                 <Input type="number" value={editData.age} onChange={e => setEditData({...editData, age: e.target.value})} />
               </div>
               <div>
@@ -221,20 +223,20 @@ export function Profile() {
                 <Input value={editData.locality} onChange={e => setEditData({...editData, locality: e.target.value})} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Interests (comma separated)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.interests')} (comma separated)</label>
                 <Input value={editData.interests} onChange={e => setEditData({...editData, interests: e.target.value})} placeholder="Reading, Gardening, Walking" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-                <textarea 
-                  value={editData.bio} 
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.bio')}</label>
+                <textarea
+                  value={editData.bio}
                   onChange={e => setEditData({...editData, bio: e.target.value})}
                   className="flex w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent min-h-[100px]"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Event Reminders</label>
-                <select 
+                <select
                   value={editData.eventReminder}
                   onChange={e => setEditData({...editData, eventReminder: e.target.value})}
                   className="flex w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
@@ -247,9 +249,9 @@ export function Profile() {
             </div>
 
             <div className="flex justify-end gap-3 mt-4">
-              <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>{t('profile.cancel')}</Button>
               <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? 'Saving...' : <><Save className="w-5 h-5 mr-2" /> Save Changes</>}
+                {isSaving ? '...' : <><Save className="w-5 h-5 mr-2" /> {t('profile.saveChanges')}</>}
               </Button>
             </div>
           </Card>
@@ -266,7 +268,7 @@ export function Profile() {
                 <X className="w-6 h-6" />
               </Button>
             </div>
-            
+
             <div className="flex flex-col gap-4">
               {blockedUsers.length === 0 ? (
                 <p className="text-gray-500 text-lg">You have no blocked users.</p>

@@ -5,9 +5,10 @@ import { Button } from '../components/ui/Button';
 import { connectionService } from '../services/connectionService';
 import { safetyService } from '../services/safetyService';
 import { notificationService } from '../services/notificationService';
+import { useTranslation } from 'react-i18next';
 
 export function Connections() {
-
+  const { t } = useTranslation();
   const [connected, setConnected] = useState<any[]>([]);
   const connectedRef = useRef(connected);
   useEffect(() => { connectedRef.current = connected; }, [connected]);
@@ -75,10 +76,10 @@ export function Connections() {
   };
 
   const handleBlockUser = async (userId: string, name: string) => {
-    if (window.confirm(`Are you sure you want to block ${name}?`)) {
+    if (window.confirm(t('connections.blockConfirm', { name }))) {
       try {
         await safetyService.blockUser(userId);
-        alert(`${name} has been blocked.`);
+        alert(t('connections.hasBeenBlocked', { name }));
         fetchConnections();
       } catch (err) {
         alert('Failed to block user.');
@@ -87,7 +88,7 @@ export function Connections() {
   };
 
   const handleRemoveConnection = async (connId: string, name: string) => {
-    if (window.confirm(`Are you sure you want to remove ${name} from your connections?`)) {
+    if (window.confirm(t('connections.removeConfirm', { name }))) {
       try {
         await connectionService.removeConnection(connId);
         fetchConnections();
@@ -184,7 +185,7 @@ export function Connections() {
       <div className="flex justify-center items-center py-20">
         <Card className="p-10 text-center bg-brand-50/50 border-brand-100 flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-2xl font-bold text-brand-800">Loading your connections...</p>
+          <p className="text-2xl font-bold text-brand-800">{t('connections.loadingConnections')}</p>
         </Card>
       </div>
     );
@@ -194,8 +195,8 @@ export function Connections() {
     return (
       <div className="flex justify-center items-center py-20">
         <Card className="p-10 text-center bg-red-50/50 border-red-100 flex flex-col items-center gap-4">
-          <p className="text-2xl font-bold text-red-800">Unable to load your connections.</p>
-          <Button onClick={() => { setLoading(true); fetchConnections(); }}>Try Again</Button>
+          <p className="text-2xl font-bold text-red-800">{t('connections.unableToLoad')}</p>
+          <Button onClick={() => { setLoading(true); fetchConnections(); }}>{t('admin.tryAgain')}</Button>
         </Card>
       </div>
     );
@@ -256,8 +257,8 @@ export function Connections() {
           {(!activeConnection.messages || activeConnection.messages.length === 0) && (
              <div className="text-center mt-10">
                <div className="text-6xl mb-4">👋</div>
-               <h3 className="text-2xl font-bold text-gray-900 mb-2">Start a conversation with {activeConnection.name}</h3>
-               <p className="text-lg text-gray-500">Send a message and start getting to know your connection.</p>
+               <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('connections.sendMessage')} {activeConnection.name}</h3>
+               <p className="text-lg text-gray-500">{t('connections.noMessagesYet')}</p>
              </div>
           )}
           {(activeConnection.messages || []).map((msg:any, i:number) => (
@@ -277,7 +278,7 @@ export function Connections() {
 
         <div className="bg-white p-4 md:p-6 border-t border-gray-200 shrink-0">
           <form onSubmit={handleSendMessage} className="flex gap-3">
-            <input value={messageInput} onChange={e => setMessageInput(e.target.value)} placeholder="Type your message..." className="flex-1 min-w-0 h-16 rounded-2xl border-2 border-gray-300 bg-gray-50 px-5 text-xl outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500 transition-all" />
+            <input value={messageInput} onChange={e => setMessageInput(e.target.value)} placeholder={t('connections.typeYourMessage')} className="flex-1 min-w-0 h-16 rounded-2xl border-2 border-gray-300 bg-gray-50 px-5 text-xl outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500 transition-all" />
             <Button type="submit" className="h-16 w-16 shrink-0 px-0 flex items-center justify-center rounded-2xl shadow-md" disabled={!messageInput.trim()}>
               <Send className="w-8 h-8" />
             </Button>
@@ -292,8 +293,8 @@ export function Connections() {
   return (
     <div className="flex flex-col gap-8 pb-8">
       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
-        <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-3">My Connections</h1>
-        <p className="text-xl md:text-2xl text-gray-600 font-medium">Manage your friends and chats.</p>
+        <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-3">{t('connections.connections')}</h1>
+        <p className="text-xl md:text-2xl text-gray-600 font-medium">{t('connections.manageFriends')}</p>
       </div>
 
 
@@ -301,7 +302,7 @@ export function Connections() {
       <section>
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 px-2 flex items-center gap-2 sm:gap-3">
            <span className="bg-green-100 text-green-700 w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-xl sm:text-2xl">{connected.length}</span>
-            My Connections
+            {t('connections.connections')}
         </h2>
         <div className="flex flex-col gap-4">
           {connected.map(conn => (
@@ -318,7 +319,7 @@ export function Connections() {
                 </h3>
                 <p className="text-xl text-gray-500 font-medium">Age {conn.age}</p>
                 {conn.interests && conn.interests.length > 0 && (
-                  <p className="text-brand-700 font-bold mt-2 bg-brand-50 inline-block px-4 py-1.5 rounded-xl border border-brand-200">Shared: {conn.interests.join(', ')}</p>
+                  <p className="text-brand-700 font-bold mt-2 bg-brand-50 inline-block px-4 py-1.5 rounded-xl border border-brand-200">{t('connections.shared')}{conn.interests.join(', ')}</p>
                 )}
                 <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                   {conn.messages && conn.messages.length > 0 ? (
@@ -329,29 +330,29 @@ export function Connections() {
                       </p>
                     </div>
                   ) : (
-                    <p className="text-gray-500 italic">Start a conversation</p>
+                    <p className="text-gray-500 italic">{t('connections.startConversation')}</p>
                   )}
                 </div>
               </div>
               <div className="flex flex-col gap-2 w-full md:w-auto mt-4 md:mt-0 items-center md:items-end">
                 <div className="flex flex-col sm:flex-row gap-2 w-full">
-                  <Button variant="outline" size="lg" className="flex-1 h-12 text-base sm:text-lg" onClick={() => window.location.href=`/users/${conn.userId}`}>View Profile</Button>
-                  <Button size="lg" className="flex-1 h-12 shadow-md text-base sm:text-lg" onClick={() => setActiveChatId(conn.id)}><MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" /> Chat</Button>
+                  <Button variant="outline" size="lg" className="flex-1 h-12 text-base sm:text-lg" onClick={() => window.location.href=`/users/${conn.userId}`}>{t('connections.viewProfile')}</Button>
+                  <Button size="lg" className="flex-1 h-12 shadow-md text-base sm:text-lg" onClick={() => setActiveChatId(conn.id)}><MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" /> {t('connections.chat')}</Button>
                 </div>
                 <div className="flex gap-3 text-sm mt-1 justify-center md:justify-end">
-                  <button onClick={() => handleRemoveConnection(conn.id, conn.name)} className="text-gray-500 hover:text-gray-800 underline">Remove</button>
+                  <button onClick={() => handleRemoveConnection(conn.id, conn.name)} className="text-gray-500 hover:text-gray-800 underline">{t('connections.remove')}</button>
                   <span className="text-gray-300">|</span>
-                  <button onClick={() => handleReportUser(conn.userId)} className="text-gray-500 hover:text-gray-800 underline">Report</button>
+                  <button onClick={() => handleReportUser(conn.userId)} className="text-gray-500 hover:text-gray-800 underline">{t('connections.report')}</button>
                   <span className="text-gray-300">|</span>
-                  <button onClick={() => handleBlockUser(conn.userId, conn.name)} className="text-red-500 hover:text-red-700 underline">Block</button>
+                  <button onClick={() => handleBlockUser(conn.userId, conn.name)} className="text-red-500 hover:text-red-700 underline">{t('connections.block')}</button>
                 </div>
               </div>
             </Card>
           ))}
           {connected.length === 0 && (
             <Card className="p-10 text-center bg-gray-50 border-gray-300 border-dashed">
-              <p className="text-2xl text-gray-600 font-bold mb-4">No connections yet.</p>
-              <Button size="lg" className="h-16 text-xl px-8" onClick={() => window.location.href='/people'}>Find People Near You</Button>
+              <p className="text-2xl text-gray-600 font-bold mb-4">{t('connections.noConnectionsYet')}</p>
+              <Button size="lg" className="h-16 text-xl px-8" onClick={() => window.location.href='/people'}>{t('connections.findPeopleNearYou')}</Button>
             </Card>
           )}
         </div>
@@ -361,21 +362,21 @@ export function Connections() {
       {showReportModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <Card className="bg-white w-full max-w-md p-6 flex flex-col gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">Report User</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('reporting.reportUser')}</h2>
             <p className="text-gray-600">Please let us know why you are reporting this user.</p>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('reporting.reason')}</label>
               <select
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
                 className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
-                <option value="Harassment">Harassment or Bullying</option>
+                <option value="Harassment">{t('reporting.harassment')}</option>
                 <option value="Spam">Spam</option>
-                <option value="Fake Profile">Fake Profile</option>
+                <option value="Fake Profile">{t('reporting.fakeProfile')}</option>
                 <option value="Inappropriate Content">Inappropriate Content</option>
-                <option value="Other">Other</option>
+                <option value="Other">{t('reporting.other')}</option>
               </select>
             </div>
 
@@ -390,9 +391,9 @@ export function Connections() {
             </div>
 
             <div className="flex justify-end gap-3 mt-4">
-              <Button variant="outline" onClick={() => setShowReportModal(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setShowReportModal(false)}>{t('reporting.cancel')}</Button>
               <Button onClick={submitReport} disabled={isReporting} className="bg-red-600 hover:bg-red-700 text-white border-red-600">
-                {isReporting ? 'Submitting...' : 'Submit Report'}
+                {isReporting ? '...' : t('reporting.submitReport')}
               </Button>
             </div>
           </Card>

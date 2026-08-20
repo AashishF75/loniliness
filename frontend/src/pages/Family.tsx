@@ -3,8 +3,10 @@ import { Shield, ShieldAlert, Heart, Activity, CheckCircle, Calendar, Users } fr
 import { Card } from '../components/ui/Card';
 import { familyService } from '../services/familyService';
 import { userService } from '../services/userService';
+import { useTranslation } from 'react-i18next';
 
 export function Family() {
+  const { t } = useTranslation();
   const [isShared, setIsShared] = useState(false);
   const [seniorName, setSeniorName] = useState('Ramesh Kumar');
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,7 @@ export function Family() {
   const handleToggle = async () => {
     const newVal = !isShared;
     setIsShared(newVal); // optimistic update
-    
+
     const result = await familyService.toggleConsent();
     if (result !== null) {
       setIsShared(result);
@@ -47,7 +49,7 @@ export function Family() {
       {/* Header */}
       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-2">Family View</h1>
+          <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-2">{t('family.family')}</h1>
           <p className="text-xl text-gray-600 font-medium">Keep your loved ones updated safely.</p>
         </div>
         <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
@@ -72,9 +74,9 @@ export function Family() {
         </div>
 
         <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-2 md:mt-0">
-          <input 
-            type="checkbox" 
-            className="sr-only peer" 
+          <input
+            type="checkbox"
+            className="sr-only peer"
             checked={isShared}
             onChange={handleToggle}
           />
@@ -85,9 +87,9 @@ export function Family() {
       {/* Dashboard View (Mock Data for Dashboard visually) */}
       <div className={`flex flex-col gap-6 transition-all duration-300 ${!isShared ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
         <h2 className="text-3xl font-bold text-gray-900 px-2 mt-4">Senior: {seniorName}</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           <Card className="p-6 md:p-8 flex flex-col gap-5 border-l-8 border-l-brand-500 shadow-sm">
             <div className="flex items-center gap-3 text-brand-700">
               <Activity className="w-7 h-7" />
@@ -125,10 +127,10 @@ export function Family() {
               </div>
             </div>
           </Card>
-          
+
         </div>
       </div>
-      
+
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Users, Clock, Search, Plus, X, ArrowLeft, Filter, Bookmark, BookmarkCheck, Trash2, MessageCircle, Send, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { eventService } from '../services/eventService';
 import type { EventData } from '../services/eventService';
 import { userService } from '../services/userService';
@@ -11,19 +12,20 @@ import { Card } from '../components/ui/Card';
 const CATEGORIES = ['All', 'Morning Walk', 'Yoga', 'Gardening', 'Music', 'Cooking', 'Storytelling', 'Spiritual', 'Sports', 'Learning', 'Other'];
 
 export function Events() {
+  const { t } = useTranslation();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('upcoming');
   const navigate = useNavigate();
-  
+
   // Filters
   const [category, setCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('All');
   const [radiusFilter, setRadiusFilter] = useState('All');
   const [sortFilter, setSortFilter] = useState('soonest');
-  
+
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
@@ -31,7 +33,7 @@ export function Events() {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [messagesLoading, setMessagesLoading] = useState(false);
-  
+
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Form states
@@ -79,7 +81,7 @@ export function Events() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !activeDiscussion) return;
-    
+
     try {
       const data = await eventService.sendEventMessage(activeDiscussion.id, newMessage);
       setMessages([...messages, data.message]);
@@ -98,13 +100,13 @@ export function Events() {
       if (searchQuery) filters.search = searchQuery;
       if (dateFilter !== 'All') filters.date = dateFilter.toLowerCase();
       if (radiusFilter !== 'All') filters.radius = parseInt(radiusFilter);
-      
+
       if (activeTab === 'recommended') filters.filter = 'recommended';
       else if (activeTab === 'saved') filters.filter = 'saved';
       else if (activeTab === 'mine') filters.filter = 'mine';
-      
+
       filters.sort = sortFilter;
-      
+
       const data = await eventService.getEvents(filters);
       setEvents(data);
     } catch (err) {
@@ -128,7 +130,7 @@ export function Events() {
       if (!formData.title || !formData.description || !formData.location || !formData.date || !formData.startTime || !formData.endTime) {
         throw new Error('All fields are required');
       }
-      
+
       if (formData.maxParticipants <= 0) {
         throw new Error('Maximum participants must be greater than zero');
       }
@@ -156,7 +158,7 @@ export function Events() {
   const handleJoin = async (id: string) => {
     try {
       await eventService.joinEvent(id);
-      
+
       // Update local state if modal is open
       if (selectedEvent && selectedEvent.id === id) {
         setSelectedEvent({
@@ -166,7 +168,7 @@ export function Events() {
           participants: [...(selectedEvent.participants || []), { userId: currentUser?.id }]
         });
       }
-      
+
       // Update list state
       setEvents(events.map(e => {
         if (e.id === id) {
@@ -182,7 +184,7 @@ export function Events() {
   const handleLeave = async (id: string) => {
     try {
       await eventService.leaveEvent(id);
-      
+
       // Update local state if modal is open
       if (selectedEvent && selectedEvent.id === id) {
         setSelectedEvent({
@@ -192,7 +194,7 @@ export function Events() {
           participants: selectedEvent.participants.filter((p: any) => p.userId !== currentUser?.id)
         });
       }
-      
+
       // Update list state
       setEvents(events.map(e => {
         if (e.id === id) {
@@ -269,12 +271,12 @@ export function Events() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Events</h1>
-          <p className="text-gray-600 mt-1">Discover and join activities near you</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('events.events')}</h1>
+          <p className="text-gray-600 mt-1">{t('events.discoverActivities')}</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
           <Plus className="w-5 h-5" />
-          Create Event
+          {t('events.createEvent')}
         </Button>
       </div>
 
@@ -290,10 +292,10 @@ export function Events() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 bg-gray-50 sm:bg-transparent hover:bg-gray-100 sm:hover:bg-transparent'
               }`}
             >
-              {tab === 'upcoming' && '📅 Upcoming Events'}
-              {tab === 'recommended' && '✨ Recommended For You'}
-              {tab === 'saved' && '🔖 Saved Events'}
-              {tab === 'mine' && '👤 My Events'}
+              {tab === 'upcoming' && `📅 ${t('events.upcomingEvents')}`}
+              {tab === 'recommended' && `✨ ${t('events.recommendedForYou')}`}
+              {tab === 'saved' && `🔖 ${t('events.savedEvents')}`}
+              {tab === 'mine' && `👤 ${t('events.myEvents')}`}
             </button>
           ))}
         </div>
@@ -301,54 +303,54 @@ export function Events() {
 
       <Card className="p-4 bg-white border-brand-100 flex flex-col sm:flex-row gap-4">
         <form onSubmit={handleSearch} className="flex-1 flex gap-2 relative">
-          <Input 
+          <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search events..." 
+            placeholder={t('events.searchEvents')}
             className="w-full pl-10"
           />
           <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <Button type="submit" variant="outline">Search</Button>
+          <Button type="submit" variant="outline">{t('events.search')}</Button>
         </form>
-        
+
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 pb-1 sm:pb-0 w-full">
-          <select 
+          <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 w-full sm:w-auto min-w-0 sm:min-w-[120px]"
           >
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          
-          <select 
+
+          <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
             className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 w-full sm:w-auto min-w-0 sm:min-w-[120px]"
           >
-            <option value="All">All Dates</option>
-            <option value="Upcoming">Upcoming</option>
+            <option value="All">{t('events.allDates')}</option>
+            <option value="Upcoming">{t('events.upcoming')}</option>
           </select>
 
-          <select 
+          <select
             value={radiusFilter}
             onChange={(e) => setRadiusFilter(e.target.value)}
             className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 w-full sm:w-auto min-w-0 sm:min-w-[120px]"
           >
-            <option value="All">Any Distance</option>
+            <option value="All">{t('events.anyDistance')}</option>
             <option value="5">Within 5 km</option>
             <option value="10">Within 10 km</option>
             <option value="25">Within 25 km</option>
           </select>
 
-          <select 
+          <select
             value={sortFilter}
             onChange={(e) => setSortFilter(e.target.value)}
             className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 w-full sm:w-auto min-w-0 sm:min-w-[140px]"
           >
-            <option value="soonest">Soonest</option>
-            <option value="recommended">Recommended</option>
-            <option value="nearest">Nearest</option>
-            <option value="available">Most Available</option>
+            <option value="soonest">{t('events.sortSoonest')}</option>
+            <option value="recommended">{t('events.sortRecommended')}</option>
+            <option value="nearest">{t('events.sortNearest')}</option>
+            <option value="available">{t('events.sortAvailable')}</option>
           </select>
         </div>
       </Card>
@@ -356,7 +358,7 @@ export function Events() {
       {error ? (
         <Card className="p-8 text-center bg-red-50 border-red-100">
           <p className="text-red-600 mb-4 font-medium">{error}</p>
-          <Button variant="outline" onClick={() => fetchEvents()}>Try Again</Button>
+          <Button variant="outline" onClick={() => fetchEvents()}>{t('admin.tryAgain')}</Button>
         </Card>
       ) : loading ? (
         <div className="flex justify-center p-12">
@@ -368,13 +370,13 @@ export function Events() {
             <Calendar className="w-8 h-8" />
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">
-            {activeTab === 'recommended' ? 'No events matching your interests nearby yet.' :
-             activeTab === 'saved' ? 'You haven\'t saved any events yet.' :
-             activeTab === 'mine' ? 'You haven\'t created any events yet.' :
-             search ? 'No events found.' : 'No events found'}
+            {activeTab === 'recommended' ? t('events.noRecommended') :
+             activeTab === 'saved' ? t('events.noSaved') :
+             activeTab === 'mine' ? t('events.noMine') :
+             search ? t('events.noFound') : t('events.noFound')}
           </h3>
-          <p className="text-gray-500 max-w-md mx-auto mb-6">There are no events matching your filters right now. Why not create one yourself?</p>
-          <Button onClick={() => setShowCreateModal(true)}>Create an Event</Button>
+          <p className="text-gray-500 max-w-md mx-auto mb-6">{t('events.noEventsDesc')}</p>
+          <Button onClick={() => setShowCreateModal(true)}>{t('events.createAnEvent')}</Button>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -383,19 +385,19 @@ export function Events() {
               <div className="p-5 flex-1">
                 {event.recommended && (
                   <div className="inline-block bg-brand-100 text-brand-700 text-xs font-bold px-2 py-1 rounded-full mb-3">
-                    ✨ Recommended
+                    ✨ {t('events.recommendedForYou')}
                   </div>
                 )}
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="text-xl font-bold text-gray-900 line-clamp-2 pr-2">{event.title}</h3>
-                  <button 
+                  <button
                     onClick={(e) => { e.stopPropagation(); handleSave(event.id, event.isSaved); }}
                     className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors ${event.isSaved ? 'text-brand-500' : 'text-gray-400'}`}
                   >
                     {event.isSaved ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
                   </button>
                 </div>
-                
+
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center text-gray-600">
                     <MapPin className="w-4 h-4 mr-2 shrink-0 text-brand-500" />
@@ -414,7 +416,7 @@ export function Events() {
                     <span className="text-sm">{event.participantCount} / {event.maxParticipants} participants</span>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center mt-4">
                   <div className="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-lg">
                     {event.category}
@@ -429,16 +431,16 @@ export function Events() {
                 </div>
               </div>
               <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); handleViewDetails(event.id); }}>View</Button>
-                
+                <Button variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); handleViewDetails(event.id); }}>{t('events.view')}</Button>
+
                 {event.createdById === currentUser?.id ? (
-                  <Button variant="primary" className="flex-1 opacity-50 cursor-not-allowed" disabled>Owner</Button>
+                  <Button variant="primary" className="flex-1 opacity-50 cursor-not-allowed" disabled>{t('events.owner')}</Button>
                 ) : event.hasJoined ? (
-                  <Button variant="outline" className="flex-1 text-brand-600 border-brand-200 bg-brand-50" onClick={(e) => { e.stopPropagation(); handleLeave(event.id); }}>Joined ✓</Button>
+                  <Button variant="outline" className="flex-1 text-brand-600 border-brand-200 bg-brand-50" onClick={(e) => { e.stopPropagation(); handleLeave(event.id); }}>{t('events.joinedMark')}</Button>
                 ) : event.participantCount >= event.maxParticipants ? (
-                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>Full</Button>
+                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>{t('events.full')}</Button>
                 ) : (
-                  <Button variant="primary" className="flex-1" onClick={(e) => { e.stopPropagation(); handleJoin(event.id); }}>Join</Button>
+                  <Button variant="primary" className="flex-1" onClick={(e) => { e.stopPropagation(); handleJoin(event.id); }}>{t('events.join')}</Button>
                 )}
               </div>
             </Card>
@@ -450,13 +452,13 @@ export function Events() {
       {selectedEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
           <Card className="w-full max-w-lg bg-white relative max-h-[90vh] overflow-y-auto my-8">
-            <button 
+            <button
               onClick={() => setSelectedEvent(null)}
               className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
             >
               <X className="w-5 h-5 text-gray-600" />
             </button>
-            
+
             <div className="p-6 md:p-8">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex gap-2">
@@ -468,31 +470,31 @@ export function Events() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={(e) => { e.stopPropagation(); handleShare(selectedEvent.id); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
                   >
-                    <Share2 className="w-4 h-4" /> <span className="text-sm font-bold">Share</span>
+                    <Share2 className="w-4 h-4" /> <span className="text-sm font-bold">{t('events.share')}</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleSave(selectedEvent.id, selectedEvent.isSaved)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors ${selectedEvent.isSaved ? 'bg-brand-50 border-brand-200 text-brand-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
                   >
                     {selectedEvent.isSaved ? (
-                      <><BookmarkCheck className="w-4 h-4" /> <span className="text-sm font-bold">Saved</span></>
+                      <><BookmarkCheck className="w-4 h-4" /> <span className="text-sm font-bold">{t('events.saved')}</span></>
                     ) : (
-                      <><Bookmark className="w-4 h-4" /> <span className="text-sm font-bold">Save</span></>
+                      <><Bookmark className="w-4 h-4" /> <span className="text-sm font-bold">{t('events.save')}</span></>
                     )}
                   </button>
                 </div>
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">{selectedEvent.title}</h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="flex items-start">
                   <MapPin className="w-5 h-5 mr-3 text-brand-500 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500 font-medium">Location</p>
+                    <p className="text-sm text-gray-500 font-medium">{t('events.location')}</p>
                     <p className="font-semibold text-gray-900">{selectedEvent.location}</p>
                     {selectedEvent.distance !== null && <p className="text-xs text-gray-500">{selectedEvent.distance} km away</p>}
                   </div>
@@ -500,34 +502,34 @@ export function Events() {
                 <div className="flex items-start">
                   <Calendar className="w-5 h-5 mr-3 text-brand-500 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500 font-medium">Date</p>
+                    <p className="text-sm text-gray-500 font-medium">{t('events.date')}</p>
                     <p className="font-semibold text-gray-900">{new Date(selectedEvent.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <Clock className="w-5 h-5 mr-3 text-brand-500 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500 font-medium">Time</p>
+                    <p className="text-sm text-gray-500 font-medium">{t('events.time')}</p>
                     <p className="font-semibold text-gray-900">{selectedEvent.startTime} — {selectedEvent.endTime}</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <Users className="w-5 h-5 mr-3 text-brand-500 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500 font-medium">Participants</p>
+                    <p className="text-sm text-gray-500 font-medium">{t('events.participants')}</p>
                     <p className="font-semibold text-gray-900">{selectedEvent.participantCount} / {selectedEvent.maxParticipants}</p>
                   </div>
                 </div>
               </div>
 
               <div className="mb-6">
-                <h4 className="font-bold text-gray-900 mb-2 text-lg">Description</h4>
+                <h4 className="font-bold text-gray-900 mb-2 text-lg">{t('events.description')}</h4>
                 <p className="text-gray-600 leading-relaxed whitespace-pre-wrap bg-gray-50 p-4 rounded-xl">{selectedEvent.description}</p>
               </div>
 
               <div className="mb-8">
-                <h4 className="font-bold text-gray-900 mb-3 text-lg">Created By</h4>
-                <div 
+                <h4 className="font-bold text-gray-900 mb-3 text-lg">{t('events.createdBy')}</h4>
+                <div
                   className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl inline-flex cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => navigate(`/users/${selectedEvent.createdById}`)}
                 >
@@ -536,18 +538,18 @@ export function Events() {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900">{selectedEvent.creator?.name}</p>
-                    <p className="text-xs text-gray-500">Organizer</p>
+                    <p className="text-xs text-gray-500">{t('events.organizer')}</p>
                   </div>
                 </div>
               </div>
 
               {selectedEvent.participants && selectedEvent.participants.length > 0 && (
                 <div className="mb-8">
-                  <h4 className="font-bold text-gray-900 mb-3 text-lg">Participants ({selectedEvent.participantCount})</h4>
+                  <h4 className="font-bold text-gray-900 mb-3 text-lg">{t('events.participants')} ({selectedEvent.participantCount})</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {selectedEvent.participants.map((p: any) => (
-                      <div 
-                        key={p.userId} 
+                      <div
+                        key={p.userId}
                         className="flex items-center justify-between p-3 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow cursor-pointer"
                         onClick={() => navigate(`/users/${p.userId}`)}
                       >
@@ -556,11 +558,11 @@ export function Events() {
                             {p.user?.name?.[0] || 'U'}
                           </div>
                           <div>
-                            <p className="font-bold text-sm text-gray-900">{p.user?.name || 'Unknown User'}</p>
-                            <p className="text-xs text-gray-500">{p.user?.city || 'Unknown Location'}</p>
+                            <p className="font-bold text-sm text-gray-900">{p.user?.name || t('events.unknownUser')}</p>
+                            <p className="text-xs text-gray-500">{p.user?.city || t('events.unknownLocation')}</p>
                           </div>
                         </div>
-                        <span className="text-xs text-brand-600 font-medium">View</span>
+                        <span className="text-xs text-brand-600 font-medium">{t('events.view')}</span>
                       </div>
                     ))}
                   </div>
@@ -569,30 +571,30 @@ export function Events() {
 
               <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-gray-100">
                 {selectedEvent.dynamicStatus === 'CANCELLED' ? (
-                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>This event is cancelled</Button>
+                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>{t('events.eventCancelledBtn')}</Button>
                 ) : selectedEvent.dynamicStatus === 'COMPLETED' ? (
-                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>This event has ended</Button>
+                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>{t('events.eventEndedBtn')}</Button>
                 ) : selectedEvent.createdById === currentUser?.id ? (
-                  <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" onClick={() => handleCancel(selectedEvent.id)}>Cancel Event</Button>
+                  <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" onClick={() => handleCancel(selectedEvent.id)}>{t('events.cancelEvent')}</Button>
                 ) : selectedEvent.hasJoined ? (
-                  <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" onClick={() => handleLeave(selectedEvent.id)}>Leave Event</Button>
+                  <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300" onClick={() => handleLeave(selectedEvent.id)}>{t('events.leaveEvent')}</Button>
                 ) : selectedEvent.participantCount >= selectedEvent.maxParticipants ? (
-                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>Event is Full</Button>
+                  <Button variant="outline" className="flex-1 opacity-50 cursor-not-allowed" disabled>{t('events.eventFull')}</Button>
                 ) : (
-                  <Button variant="primary" className="flex-1 py-4 text-lg" onClick={() => handleJoin(selectedEvent.id)}>Join Event</Button>
+                  <Button variant="primary" className="flex-1 py-4 text-lg" onClick={() => handleJoin(selectedEvent.id)}>{t('events.joinEvent')}</Button>
                 )}
-                <Button variant="outline" className="sm:flex-none" onClick={() => setSelectedEvent(null)}>Close</Button>
+                <Button variant="outline" className="sm:flex-none" onClick={() => setSelectedEvent(null)}>{t('events.close')}</Button>
               </div>
-              
+
               {(selectedEvent.hasJoined || selectedEvent.createdById === currentUser?.id) && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <Button 
-                    variant="primary" 
-                    className="w-full py-3 flex items-center justify-center gap-2" 
+                  <Button
+                    variant="primary"
+                    className="w-full py-3 flex items-center justify-center gap-2"
                     onClick={() => { setActiveDiscussion(selectedEvent); setSelectedEvent(null); }}
                   >
                     <MessageCircle className="w-5 h-5" />
-                    Open Event Discussion
+                    {t('events.openDiscussion')}
                   </Button>
                 </div>
               )}
@@ -605,37 +607,37 @@ export function Events() {
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
           <Card className="w-full max-w-xl bg-white relative my-8">
-            <button 
+            <button
               onClick={() => setShowCreateModal(false)}
               className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors z-10"
             >
               <X className="w-5 h-5 text-gray-600" />
             </button>
-            
+
             <div className="p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Create Event</h2>
-              
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('events.createEvent')}</h2>
+
               {formError && (
                 <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-medium border border-red-100">
                   {formError}
                 </div>
               )}
-              
+
               <form onSubmit={handleCreateSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Event Title</label>
-                  <Input 
-                    required 
+                  <label className="block text-sm font-bold text-gray-700 mb-1">{t('events.eventTitle')}</label>
+                  <Input
+                    required
                     placeholder="e.g. Morning Walk at Green Park"
                     value={formData.title}
                     onChange={e => setFormData({...formData, title: e.target.value})}
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
-                    <select 
+                    <label className="block text-sm font-bold text-gray-700 mb-1">{t('events.category')}</label>
+                    <select
                       className="w-full border-gray-300 rounded-xl px-4 py-3 text-base focus:ring-brand-500 focus:border-brand-500 bg-gray-50 border-2"
                       value={formData.category}
                       onChange={e => setFormData({...formData, category: e.target.value})}
@@ -644,9 +646,9 @@ export function Events() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Location</label>
-                    <Input 
-                      required 
+                    <label className="block text-sm font-bold text-gray-700 mb-1">{t('events.location')}</label>
+                    <Input
+                      required
                       placeholder="e.g. Guntur"
                       value={formData.location}
                       onChange={e => setFormData({...formData, location: e.target.value})}
@@ -656,29 +658,29 @@ export function Events() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                    <Input 
-                      type="date" 
-                      required 
+                    <label className="block text-sm font-bold text-gray-700 mb-1">{t('events.date')}</label>
+                    <Input
+                      type="date"
+                      required
                       value={formData.date}
                       onChange={e => setFormData({...formData, date: e.target.value})}
                       min={new Date().toISOString().split('T')[0]}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Start Time</label>
-                    <Input 
-                      type="time" 
-                      required 
+                    <label className="block text-sm font-bold text-gray-700 mb-1">{t('events.startTime')}</label>
+                    <Input
+                      type="time"
+                      required
                       value={formData.startTime}
                       onChange={e => setFormData({...formData, startTime: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">End Time</label>
-                    <Input 
-                      type="time" 
-                      required 
+                    <label className="block text-sm font-bold text-gray-700 mb-1">{t('events.endTime')}</label>
+                    <Input
+                      type="time"
+                      required
                       value={formData.endTime}
                       onChange={e => setFormData({...formData, endTime: e.target.value})}
                     />
@@ -686,21 +688,21 @@ export function Events() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Max Participants</label>
-                  <Input 
-                    type="number" 
-                    min="1" 
+                  <label className="block text-sm font-bold text-gray-700 mb-1">{t('events.maxParticipants')}</label>
+                  <Input
+                    type="number"
+                    min="1"
                     max="1000"
-                    required 
+                    required
                     value={formData.maxParticipants}
                     onChange={e => setFormData({...formData, maxParticipants: parseInt(e.target.value) || 1})}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
-                  <textarea 
-                    required 
+                  <label className="block text-sm font-bold text-gray-700 mb-1">{t('events.description')}</label>
+                  <textarea
+                    required
                     rows={4}
                     placeholder="Describe what the event is about..."
                     className="w-full border-gray-300 rounded-xl px-4 py-3 text-base focus:ring-brand-500 focus:border-brand-500 bg-gray-50 border-2 resize-none"
@@ -710,9 +712,9 @@ export function Events() {
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                  <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+                  <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>{t('events.cancel')}</Button>
                   <Button type="submit" disabled={formLoading}>
-                    {formLoading ? 'Creating...' : 'Create Event'}
+                    {formLoading ? t('events.creating') : t('events.createEvent')}
                   </Button>
                 </div>
               </form>
@@ -726,7 +728,7 @@ export function Events() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-hidden">
           <Card className="w-full max-w-2xl bg-white relative h-[90vh] flex flex-col my-8 overflow-hidden rounded-2xl">
             <div className="p-4 md:p-6 border-b border-gray-100 flex items-center gap-4 bg-white shrink-0">
-              <button 
+              <button
                 onClick={() => { setActiveDiscussion(null); setSelectedEvent(activeDiscussion); }}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
               >
@@ -734,16 +736,16 @@ export function Events() {
               </button>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-gray-900 truncate">{activeDiscussion.title}</h3>
-                <p className="text-xs text-brand-600 font-medium">Event Discussion</p>
+                <p className="text-xs text-brand-600 font-medium">{t('events.eventDiscussion')}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setActiveDiscussion(null)}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 flex flex-col gap-4 hide-scrollbar">
               {messagesLoading ? (
                 <div className="flex justify-center items-center h-full">
@@ -752,8 +754,8 @@ export function Events() {
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
                   <MessageCircle className="w-12 h-12 mb-3 text-gray-300" />
-                  <p className="font-medium text-gray-900">No discussion yet</p>
-                  <p className="text-sm">Start the conversation with other participants.</p>
+                  <p className="font-medium text-gray-900">{t('events.noDiscussion')}</p>
+                  <p className="text-sm">{t('events.startConversation')}</p>
                 </div>
               ) : (
                 messages.map((msg: any) => {
@@ -784,7 +786,7 @@ export function Events() {
               <form onSubmit={handleSendMessage} className="flex gap-2 relative">
                 <input
                   type="text"
-                  placeholder={activeDiscussion.dynamicStatus === 'CANCELLED' ? "Event is cancelled" : "Type a message..."}
+                  placeholder={activeDiscussion.dynamicStatus === 'CANCELLED' ? t('events.eventIsCancelled') : t('events.typeMessage')}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   disabled={activeDiscussion.dynamicStatus === 'CANCELLED'}

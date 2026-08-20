@@ -8,29 +8,32 @@ interface BottomNavProps {
   darkMode: boolean;
 }
 
+import { useTranslation } from 'react-i18next';
+
 export const BottomNav: React.FC<BottomNavProps> = ({
   currentScreen,
   onNavigate,
   largeFont,
   darkMode,
 }) => {
+  const { t } = useTranslation();
   // Hide on splash, onboarding, login, register, sos
   const hideNav = ['splash', 'onboarding', 'login', 'register'].includes(currentScreen);
   if (hideNav) return null;
 
   const navItems = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'companions', label: 'Friends', icon: Users },
-    { id: 'activities', label: 'Activities', icon: Calendar },
-    { id: 'calls', label: 'Call', icon: PhoneCall },
-    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'home', label: t('nav.home'), icon: Home },
+    { id: 'companions', label: t('nav.friends'), icon: Users },
+    { id: 'activities', label: t('nav.activities'), icon: Calendar },
+    { id: 'calls', label: t('nav.call'), icon: PhoneCall },
+    { id: 'profile', label: t('nav.profile'), icon: User },
   ];
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto px-2 pb-2">
       <div className={`rounded-3xl shadow-2xl border backdrop-blur-md flex items-center justify-around px-2 py-2.5 transition-all ${
-        darkMode 
-          ? 'bg-gray-900/95 border-gray-800 text-white' 
+        darkMode
+          ? 'bg-gray-900/95 border-gray-800 text-white'
           : 'bg-white/95 border-emerald-100 text-gray-800'
       }`}>
         {navItems.map((item) => {

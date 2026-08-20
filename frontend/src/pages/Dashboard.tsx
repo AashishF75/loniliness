@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { User, MapPin, Calendar, Users, MessageCircle, Heart, Sparkles, Activity } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -7,7 +8,8 @@ import { userService } from '../services/userService';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const [userData, setUserData] = useState({ name: 'User', city: '', area: 'Location not set' });
+  const { t } = useTranslation();
+  const [userData, setUserData] = useState({ name: 'User', city: '', area: t('dashboard.locationNotSet') });
   const [mood, setMood] = useState<string | null>(null);
 
   useEffect(() => {
@@ -17,7 +19,7 @@ export function Dashboard() {
         setUserData({
           name: user.name || 'User',
           city: '',
-          area: user.city || 'Location not set'
+          area: user.city || t('dashboard.locationNotSet')
         });
       }
     };
@@ -32,10 +34,10 @@ export function Dashboard() {
     });
     const istHour = parseInt(formatter.format(new Date()), 10);
 
-    if (istHour >= 5 && istHour < 12) return 'Good Morning';
-    if (istHour >= 12 && istHour < 17) return 'Good Afternoon';
-    if (istHour >= 17 && istHour < 21) return 'Good Evening';
-    return 'Good Night';
+    if (istHour >= 5 && istHour < 12) return t('dashboard.goodMorning');
+    if (istHour >= 12 && istHour < 17) return t('dashboard.goodAfternoon');
+    if (istHour >= 17 && istHour < 21) return t('dashboard.goodEvening');
+    return t('dashboard.goodNight');
   };
 
   const today = new Intl.DateTimeFormat('en-US', {
@@ -64,7 +66,7 @@ export function Dashboard() {
 
       {/* Mood Section */}
       <Card className="bg-brand-50/70 border-brand-100 p-6 md:p-8">
-        <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">How are you feeling today?</h2>
+        <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">{t('dashboard.howAreYouFeeling')}</h2>
         <div className="grid grid-cols-3 gap-4">
           <button
             onClick={() => setMood('Good')}
@@ -73,9 +75,9 @@ export function Dashboard() {
             }`}
           >
             <span className="text-4xl md:text-6xl mb-3">😊</span>
-            <span className="text-base md:text-xl font-bold text-gray-700">Good</span>
+            <span className="text-base md:text-xl font-bold text-gray-700">{t('dashboard.good')}</span>
           </button>
-          
+
           <button
             onClick={() => setMood('Okay')}
             className={`flex flex-col items-center justify-center p-4 rounded-2xl border-4 transition-all ${
@@ -83,7 +85,7 @@ export function Dashboard() {
             }`}
           >
             <span className="text-4xl md:text-6xl mb-3">😐</span>
-            <span className="text-base md:text-xl font-bold text-gray-700">Okay</span>
+            <span className="text-base md:text-xl font-bold text-gray-700">{t('dashboard.okay')}</span>
           </button>
 
           <button
@@ -93,17 +95,17 @@ export function Dashboard() {
             }`}
           >
             <span className="text-4xl md:text-6xl mb-3">😔</span>
-            <span className="text-base md:text-xl font-bold text-gray-700">Lonely</span>
+            <span className="text-base md:text-xl font-bold text-gray-700">{t('dashboard.lonely')}</span>
           </button>
         </div>
 
         {mood === 'Lonely' && (
           <div className="mt-8 p-6 md:p-8 bg-blue-50 border border-blue-200 rounded-3xl text-center shadow-sm">
             <p className="text-2xl font-bold text-blue-900 mb-6 leading-relaxed">
-              "I'm here with you. Let Saathi help you find someone nearby."
+              {t('dashboard.lonelyMessage')}
             </p>
             <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-xl h-16 w-full sm:w-auto px-8" onClick={() => navigate('/people')}>
-              <Users className="w-7 h-7 mr-3" /> Find a Companion
+              <Users className="w-7 h-7 mr-3" /> {t('dashboard.findCompanion')}
             </Button>
           </div>
         )}
@@ -111,9 +113,9 @@ export function Dashboard() {
 
       {/* Main Dashboard Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-        
+
         {/* Ask Saathi */}
-        <Card 
+        <Card
           className="col-span-1 sm:col-span-2 bg-gradient-to-r from-brand-600 to-brand-800 text-white border-none cursor-pointer hover:shadow-lg transition-all p-8"
           onClick={() => navigate('/ai-companion')}
         >
@@ -121,9 +123,9 @@ export function Dashboard() {
             <div className="pr-2 sm:pr-4">
               <h2 className="text-2xl sm:text-3xl font-extrabold mb-2 sm:mb-3 flex items-center gap-2 sm:gap-3">
                 <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-brand-200" />
-                Ask Saathi
+                {t('dashboard.askSaathi')}
               </h2>
-              <p className="text-brand-100 text-lg sm:text-xl leading-relaxed">Your personal AI companion is ready to chat or answer questions.</p>
+              <p className="text-brand-100 text-lg sm:text-xl leading-relaxed">{t('dashboard.aiDesc')}</p>
             </div>
             <div className="hidden sm:flex w-20 h-20 bg-white/20 rounded-3xl items-center justify-center shrink-0 shadow-inner">
               <MessageCircle className="w-10 h-10 text-white" />
@@ -132,7 +134,7 @@ export function Dashboard() {
         </Card>
 
         {/* People Near You */}
-        <Card 
+        <Card
           className="cursor-pointer border-gray-200 hover:border-brand-400 hover:shadow-md transition-all flex flex-col justify-between p-6"
           onClick={() => navigate('/people')}
         >
@@ -141,17 +143,17 @@ export function Dashboard() {
               <Users className="w-8 h-8" />
             </div>
             <span className="bg-blue-100 text-blue-800 text-lg font-bold px-4 py-1.5 rounded-full">
-              Nearby
+              {t('dashboard.nearby')}
             </span>
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">People Near You</h3>
-            <p className="text-xl text-gray-600">Find companions sharing your interests.</p>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard.peopleNearYou')}</h3>
+            <p className="text-xl text-gray-600">{t('dashboard.peopleNearYouDesc')}</p>
           </div>
         </Card>
 
         {/* Today's Activities */}
-        <Card 
+        <Card
           className="cursor-pointer border-gray-200 hover:border-brand-400 hover:shadow-md transition-all flex flex-col justify-between p-6"
           onClick={() => navigate('/activities')}
         >
@@ -164,13 +166,13 @@ export function Dashboard() {
             </span>
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Today's Activities</h3>
-            <p className="text-xl text-gray-600">Evening Yoga at Local Park.</p>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard.todaysActivitiesLabel')}</h3>
+            <p className="text-xl text-gray-600">{t('dashboard.activitiesDesc')}</p>
           </div>
         </Card>
 
         {/* My Connections */}
-        <Card 
+        <Card
           className="cursor-pointer border-gray-200 hover:border-brand-400 hover:shadow-md transition-all flex flex-col justify-between p-6"
           onClick={() => navigate('/connections')}
         >
@@ -178,13 +180,13 @@ export function Dashboard() {
             <Heart className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">My Connections</h3>
-            <p className="text-xl text-gray-600">View your saved friends and chats.</p>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard.myConnections')}</h3>
+            <p className="text-xl text-gray-600">{t('dashboard.myConnectionsDesc')}</p>
           </div>
         </Card>
 
         {/* Family Updates */}
-        <Card 
+        <Card
           className="cursor-pointer border-gray-200 hover:border-brand-400 hover:shadow-md transition-all flex flex-col justify-between p-6"
           onClick={() => navigate('/family')}
         >
@@ -195,8 +197,8 @@ export function Dashboard() {
             <span className="w-5 h-5 bg-red-500 rounded-full border-2 border-white shadow-sm"></span>
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Family Updates</h3>
-            <p className="text-xl text-gray-600">New message from your daughter.</p>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard.familyUpdates')}</h3>
+            <p className="text-xl text-gray-600">{t('dashboard.familyUpdatesDesc')}</p>
           </div>
         </Card>
       </div>
