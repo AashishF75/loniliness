@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar, Link2, XCircle, Shield, Globe, ChevronDown } from 'lucide-react';
+import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar, Link2, XCircle, Shield } from 'lucide-react';
 import { notificationService } from '../../services/notificationService';
 import { connectionService } from '../../services/connectionService';
 import { useTranslation } from 'react-i18next';
@@ -11,10 +11,8 @@ export function RootLayout() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showLangMenu, setShowLangMenu] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const langMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -39,9 +37,6 @@ export function RootLayout() {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
-      }
-      if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
-        setShowLangMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -141,48 +136,7 @@ export function RootLayout() {
               })}
             </nav>
 
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="relative" ref={langMenuRef}>
-                <button
-                  onClick={() => setShowLangMenu(!showLangMenu)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
-                >
-                  <Globe className="w-4 h-4 text-brand-600" />
-                  <span className="hidden sm:inline">
-                    {{'en':'English', 'hi':'हिन्दी', 'te':'తెలుగు', 'ml':'മലയാളം', 'bho':'भोजपुरी'}[i18n.language || 'en'] || 'English'}
-                  </span>
-                  <ChevronDown className="w-3 h-3 text-gray-400" />
-                </button>
-
-                {showLangMenu && (
-                  <div className="absolute right-0 mt-2 w-32 rounded-xl shadow-xl overflow-hidden border bg-white border-gray-100 z-[100]">
-                    {[
-                      { code: 'en', name: 'English' },
-                      { code: 'hi', name: 'हिन्दी' },
-                      { code: 'te', name: 'తెలుగు' },
-                      { code: 'ml', name: 'മലയാളം' },
-                      { code: 'bho', name: 'भोजपुरी' }
-                    ].map((lang) => (
-                      <button
-                        key={lang.code}
-                        className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors ${
-                          (i18n.language || 'en') === lang.code
-                            ? 'bg-brand-50 text-brand-700'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        }`}
-                        onClick={() => {
-                          i18n.changeLanguage(lang.code);
-                          localStorage.setItem('saathi_language', lang.code);
-                          setShowLangMenu(false);
-                        }}
-                      >
-                        {lang.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
+            <div className="flex items-center gap-4">
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
