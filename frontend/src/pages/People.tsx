@@ -17,7 +17,7 @@ export function People() {
   const [connectedIds, setConnectedIds] = useState<string[]>([]);
 
   const [search, setSearch] = useState('');
-  const [radius, setRadius] = useState<number>(10);
+  const [radius, setRadius] = useState<number>(0);
   const [interest, setInterest] = useState('');
   const [commonInterestsOnly, setCommonInterestsOnly] = useState(false);
 
@@ -33,7 +33,8 @@ export function People() {
       const user = await userService.getUser();
       if (user?.interests) setUserInterests(user.interests);
 
-      const currentFilters = filtersObj || { radius, search, interest, commonInterestsOnly };
+      const activeRadius = filtersObj?.radius !== undefined ? filtersObj.radius : radius;
+      const currentFilters = filtersObj || { radius: activeRadius > 0 ? activeRadius : undefined, search, interest, commonInterestsOnly };
       const [nearbyPeople, connections, outgoing] = await Promise.all([
         connectionService.getNearbyPeople(currentFilters),
         connectionService.getConnections(),
@@ -65,7 +66,7 @@ export function People() {
     // Only re-fetch when filters change and we are not initial loading
     if (!loading) {
        const timer = setTimeout(() => {
-         fetchPeople({ radius, search, interest, commonInterestsOnly });
+         fetchPeople({ radius: radius > 0 ? radius : undefined, search, interest, commonInterestsOnly });
        }, 500); // debounce search
        return () => clearTimeout(timer);
     }
@@ -73,7 +74,7 @@ export function People() {
 
   const clearFilters = () => {
     setSearch('');
-    setRadius(10);
+    setRadius(0);
     setInterest('');
     setCommonInterestsOnly(false);
   };
@@ -135,9 +136,7 @@ export function People() {
                 value={radius}
                 onChange={(e) => setRadius(Number(e.target.value))}
               >
-                <option value={2}>{t('people.within2km')}</option>
-                <option value={5}>{t('people.within5km')}</option>
-                <option value={10}>{t('people.within10km')}</option>
+                <option value={0}>Any Distance</option>
               </select>
             </div>
             <div className="flex flex-col gap-3">
@@ -173,7 +172,7 @@ export function People() {
         </Card>
       ) : people.length === 0 ? (
         <Card className="p-10 text-center bg-gray-50 border-gray-300 border-dashed">
-          {search || interest || commonInterestsOnly || radius < 10 ? (
+          {search || interest || commonInterestsOnly || radius > 0 ? (
             <>
               <p className="text-2xl text-gray-800 font-bold mb-2">{t('people.noMatches')}</p>
               <Button variant="outline" className="mt-4" onClick={clearFilters}>{t('people.clearFilters')}</Button>
