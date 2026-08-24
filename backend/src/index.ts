@@ -20,6 +20,7 @@ import notificationRoutes from './routes/notification.routes';
 import safetyRoutes from './routes/safety.routes';
 import eventRoutes from './routes/event.routes';
 import adminRoutes from './routes/admin.routes';
+import familyRoutes from './routes/family.routes';
 import { globalLimiter } from './middleware/rateLimiter';
 
 // Apply global rate limiting to all API routes
@@ -35,13 +36,22 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/safety', safetyRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/family', familyRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Saathi API is running perfectly.' });
 });
 
+import http from 'http';
+import { initializeSocket } from './socket';
+
+const server = http.createServer(app);
+export const io = initializeSocket(server);
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Saathi Backend Server running on port ${PORT}`);
 });
+
+export { app, server };

@@ -45,6 +45,29 @@ export const canViewParentLocation = async (parentId: string, memberId: string):
 };
 
 /**
+ * Authorization helper: Checks if a parent has at least one active family relationship
+ * with live location sharing enabled and active.
+ */
+export const canParentShareLocation = async (parentId: string): Promise<boolean> => {
+  try {
+    const activeRel = await prisma.familyRelationship.findFirst({
+      where: {
+        parentId,
+        status: 'ACCEPTED',
+        permissions: {
+          shareLiveLocation: true,
+          isLocationSharingActive: true
+        }
+      }
+    });
+    return !!activeRel;
+  } catch (error) {
+    return false;
+  }
+};
+
+
+/**
  * POST /api/family/invite
  * Senior invites a family member by email, phone, or User ID.
  */
