@@ -92,7 +92,7 @@ export function Register() {
       setError('Please fill in all fields.');
       return;
     }
-    if (parseInt(formData.age) < 50) {
+    if ((formData as any).role !== 'FAMILY' && parseInt(formData.age) < 50) {
       setError('Saathi is designed for senior citizens aged 50 and above.');
       return;
     }
