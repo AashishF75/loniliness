@@ -24,6 +24,8 @@ export function Login() {
         const user = JSON.parse(userStr);
         if (user.role === 'ADMIN') {
           navigate('/admin');
+        } else if (user.role === 'FAMILY') {
+          navigate('/family');
         } else {
           navigate('/dashboard');
         }
@@ -46,8 +48,10 @@ export function Login() {
     if (res.success) {
       if (res.role === 'ADMIN') {
         navigate('/admin');
+      } else if (res.role === 'FAMILY') {
+        navigate('/family');
       } else {
-        navigate('/dashboard'); // or onboarding if they are new, but for MVP dashboard is fine
+        navigate('/dashboard');
       }
     } else {
       setError(res.message || 'Login failed. Please try again.');
@@ -116,13 +120,23 @@ export function Login() {
         </form>
       </Card>
 
-      <div className="text-center">
-        <p className="text-xl text-gray-600 font-medium">
-          {t('auth.dontHaveAccount')}{' '}
-          <button onClick={() => navigate('/register')} className="text-brand-700 font-bold hover:underline">
-            {t('auth.register')}
+      <div className="text-center flex flex-col gap-3">
+        <p className="text-xl text-gray-600 font-medium">Don't have an account?</p>
+        <div className="flex flex-wrap justify-center items-center gap-3 text-lg font-bold">
+          <button
+            onClick={() => navigate('/register?role=SENIOR')}
+            className="text-brand-700 hover:text-brand-900 bg-brand-50 hover:bg-brand-100 px-5 py-2.5 rounded-2xl border border-brand-200 transition-colors"
+          >
+            Register as Senior Citizen
           </button>
-        </p>
+          <span className="text-gray-400 font-normal">or</span>
+          <button
+            onClick={() => navigate('/register?role=FAMILY')}
+            className="text-brand-700 hover:text-brand-900 bg-brand-50 hover:bg-brand-100 px-5 py-2.5 rounded-2xl border border-brand-200 transition-colors"
+          >
+            Register as Family Member
+          </button>
+        </div>
       </div>
     </div>
   );
