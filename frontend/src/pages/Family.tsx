@@ -4,8 +4,6 @@ import {
   Users,
   UserPlus,
   Heart,
-  Shield,
-  ShieldAlert,
   MapPin,
   Activity,
   CheckCircle,
@@ -14,57 +12,179 @@ import {
   Send,
   Clock,
   Radio,
-  Check
+  AlertTriangle,
+  ShieldCheck,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { StatusPill } from '../components/ui/StatusPill';
+import { Badge } from '../components/ui/Badge';
+import { Avatar } from '../components/ui/Avatar';
+import { SectionHeader } from '../components/ui/SectionHeader';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingState } from '../components/ui/LoadingState';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { familyService, type FamilyRelationship } from '../services/familyService';
 import { userService } from '../services/userService';
+import { FamilyMap } from '../components/FamilyMap';
+
+function ParentLocationViewer({ rel }: { rel: FamilyRelationship }) {
+  const { t } = useTranslation();
+  const [showMap, setShowMap] = useState(false);
+
+  const perms = rel.permissions || {
+    shareActivities: false,
+    shareLiveLocation: false,
+    isLocationSharingActive: false
+  };
+
+  const isAuthorized = perms.shareLiveLocation && perms.isLocationSharingActive;
+
+  return (
+    <Card className="p-5 sm:p-7 flex flex-col gap-6 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+      {/* Parent Header Card */}
+      <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+        <div className="flex items-center gap-4">
+          <Avatar name={rel.parent?.name || 'Parent Senior'} size="xl" colorScheme="purple" />
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900">{rel.parent?.name || 'Parent Senior'}</h3>
+              <Badge variant="purple">{t('family.roleMember')}</Badge>
+            </div>
+            <p className="text-sm sm:text-base text-gray-500 font-medium">{rel.parent?.city || rel.parent?.email}</p>
+          </div>
+        </div>
+
+        <StatusPill
+          status={isAuthorized ? 'live' : 'offline'}
+          label={isAuthorized ? t('family.liveLocationOn') : t('family.liveLocationOff')}
+          size="md"
+        />
+      </div>
+
+      {/* Permission Summary Indicators */}
+      <div className="grid grid-cols-2 gap-3 text-sm font-semibold text-gray-600">
+        <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex items-center justify-between">
+          <span className="flex items-center gap-2 text-gray-700">
+            <Activity className="w-4 h-4 text-purple-600" />
+            {t('family.shareActivities')}
+          </span>
+          <StatusPill
+            status={perms.shareActivities ? 'active' : 'disabled'}
+            label={perms.shareActivities ? 'ON' : 'OFF'}
+            size="sm"
+            showDot={false}
+          />
+        </div>
+        <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex items-center justify-between">
+          <span className="flex items-center gap-2 text-gray-700">
+            <MapPin className="w-4 h-4 text-blue-600" />
+            {t('family.shareLiveLocation')}
+          </span>
+          <StatusPill
+            status={perms.shareLiveLocation ? 'connected' : 'disabled'}
+            label={perms.shareLiveLocation ? 'ON' : 'OFF'}
+            size="sm"
+            showDot={false}
+          />
+        </div>
+      </div>
+
+      {/* View Live Location Button */}
+      <div>
+        <Button
+          onClick={() => setShowMap(!showMap)}
+          variant={showMap ? 'outline' : 'primary'}
+          className={`w-full py-3.5 text-base sm:text-lg font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all ${
+            showMap ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'bg-brand-600 text-white hover:bg-brand-700 shadow-md'
+          }`}
+        >
+          {showMap ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          {showMap ? t('family.hideLiveLocation') : t('family.viewLiveLocation')}
+        </Button>
+      </div>
+
+      {/* Embedded Map or Location Unavailable Notice */}
+      {showMap && (
+        <div className="mt-1">
+          {isAuthorized ? (
+            <FamilyMap
+              parentId={rel.parentId}
+              parentName={rel.parent?.name || 'Parent Senior'}
+              isSharingActive={true}
+              onClose={() => setShowMap(false)}
+            />
+          ) : (
+            <div className="p-5 bg-amber-50/80 border border-amber-200 text-amber-900 rounded-2xl text-base font-bold flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-extrabold text-amber-950 mb-1">{t('family.permissionDenied')}</p>
+                <p className="text-sm font-medium text-amber-800">{t('family.parentLocationUnavailable')}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
 
 export function Family() {
   const { t } = useTranslation();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Parent state
+  // Senior state
   const [members, setMembers] = useState<FamilyRelationship[]>([]);
   const [outgoingInvites, setOutgoingInvites] = useState<FamilyRelationship[]>([]);
 
-  // Family member state
+  // Family Member state
   const [parents, setParents] = useState<FamilyRelationship[]>([]);
   const [incomingInvites, setIncomingInvites] = useState<FamilyRelationship[]>([]);
 
-  // Invitation form
+  // Invitation Form
   const [inviteIdentifier, setInviteIdentifier] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Active action states
+  // Permission update tracking
   const [updatingPermId, setUpdatingPermId] = useState<string | null>(null);
 
-  const loadFamilyData = async () => {
+  // Remove confirm dialog state
+  const [removeDialogState, setRemoveDialogState] = useState<{ isOpen: boolean; relId: string | null; memberName: string }>({
+    isOpen: false,
+    relId: null,
+    memberName: ''
+  });
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
     setLoading(true);
     try {
       const user = await userService.getUser();
       setCurrentUser(user);
 
-      // Fetch invitations (incoming & outgoing)
-      const inviteRes = await familyService.getInvitations();
-      if (inviteRes && inviteRes.success) {
-        setIncomingInvites(inviteRes.incoming || []);
-        setOutgoingInvites(inviteRes.outgoing || []);
-      }
+      const [membersRes, invRes, parentsRes] = await Promise.all([
+        familyService.getFamilyMembers(),
+        familyService.getInvitations(),
+        familyService.getConnectedParents()
+      ]);
 
-      // Fetch connected members (for senior)
-      const membersRes = await familyService.getFamilyMembers();
-      if (membersRes && membersRes.success) {
-        setMembers(membersRes.members || []);
+      if (membersRes.success && membersRes.data) {
+        setMembers(membersRes.data);
       }
-
-      // Fetch connected parents (for family member)
-      const parentsRes = await familyService.getConnectedParents();
-      if (parentsRes && parentsRes.success) {
-        setParents(parentsRes.parents || []);
+      if (invRes.success) {
+        setOutgoingInvites(invRes.outgoing || invRes.data?.outgoing || []);
+        setIncomingInvites(invRes.incoming || invRes.data?.incoming || []);
+      }
+      if (parentsRes.success && parentsRes.data) {
+        setParents(parentsRes.data);
       }
     } catch (err) {
       console.error('Error loading family data:', err);
@@ -73,10 +193,6 @@ export function Family() {
     }
   };
 
-  useEffect(() => {
-    loadFamilyData();
-  }, []);
-
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteIdentifier.trim()) return;
@@ -84,54 +200,47 @@ export function Family() {
     setInviting(true);
     setInviteMessage(null);
 
-    try {
-      const res = await familyService.inviteFamilyMember(inviteIdentifier.trim());
-      if (res && res.success) {
-        setInviteMessage({ type: 'success', text: t('family.inviteSuccess') });
-        setInviteIdentifier('');
-        loadFamilyData();
-      } else {
-        setInviteMessage({ type: 'error', text: res?.message || 'Failed to send invitation' });
+    const res = await familyService.inviteFamilyMember(inviteIdentifier.trim());
+    setInviting(false);
+
+    if (res.success) {
+      setInviteMessage({ type: 'success', text: t('family.inviteSuccess') });
+      setInviteIdentifier('');
+      const invRes = await familyService.getInvitations();
+      if (invRes.success) {
+        setOutgoingInvites(invRes.outgoing || invRes.data?.outgoing || []);
       }
-    } catch (err: any) {
-      setInviteMessage({ type: 'error', text: err?.message || 'Error sending invitation' });
-    } finally {
-      setInviting(false);
+    } else {
+      setInviteMessage({ type: 'error', text: res.error || 'Failed to send invitation' });
     }
   };
 
-  const handleAcceptInvite = async (relationshipId: string) => {
-    try {
-      const res = await familyService.acceptInvitation(relationshipId);
-      if (res && res.success) {
-        loadFamilyData();
-      }
-    } catch (err) {
-      console.error('Accept invite error:', err);
+  const handleRespondInvite = async (relationshipId: string, accept: boolean) => {
+    const res = accept
+      ? await familyService.acceptInvitation(relationshipId)
+      : await familyService.rejectInvitation(relationshipId);
+    if (res.success) {
+      loadData();
     }
   };
 
-  const handleRejectInvite = async (relationshipId: string) => {
-    try {
-      const res = await familyService.rejectInvitation(relationshipId);
-      if (res && res.success) {
-        loadFamilyData();
-      }
-    } catch (err) {
-      console.error('Reject invite error:', err);
-    }
+  const confirmRemoveMember = (relId: string, name: string) => {
+    setRemoveDialogState({
+      isOpen: true,
+      relId,
+      memberName: name
+    });
   };
 
-  const handleRemoveMember = async (relationshipId: string) => {
-    if (!window.confirm(t('family.removeConfirm'))) return;
+  const handleExecuteRemoveMember = async () => {
+    if (!removeDialogState.relId) return;
+    setIsRemoving(true);
+    const res = await familyService.removeFamilyMember(removeDialogState.relId);
+    setIsRemoving(false);
+    setRemoveDialogState({ isOpen: false, relId: null, memberName: '' });
 
-    try {
-      const res = await familyService.removeFamilyMember(relationshipId);
-      if (res && res.success) {
-        loadFamilyData();
-      }
-    } catch (err) {
-      console.error('Remove member error:', err);
+    if (res.success) {
+      loadData();
     }
   };
 
@@ -139,87 +248,80 @@ export function Family() {
     relationshipId: string,
     key: 'shareActivities' | 'shareLiveLocation' | 'isLocationSharingActive',
     currentVal: boolean,
-    perms: any
+    currentPerms: any
   ) => {
     setUpdatingPermId(relationshipId);
-    try {
-      let updatedPayload: any = {
-        shareActivities: perms?.shareActivities ?? false,
-        shareLiveLocation: perms?.shareLiveLocation ?? false,
-        isLocationSharingActive: perms?.isLocationSharingActive ?? false
-      };
 
-      updatedPayload[key] = !currentVal;
+    const updated = {
+      shareActivities: currentPerms.shareActivities,
+      shareLiveLocation: currentPerms.shareLiveLocation,
+      isLocationSharingActive: currentPerms.isLocationSharingActive,
+      [key]: !currentVal
+    };
 
-      // If disabling live location, force active state to false
-      if (key === 'shareLiveLocation' && currentVal === true) {
-        updatedPayload.isLocationSharingActive = false;
-      }
+    if (key === 'shareLiveLocation' && currentVal) {
+      updated.isLocationSharingActive = false;
+    }
 
-      const res = await familyService.updatePermissions(relationshipId, updatedPayload);
-      if (res && res.success) {
-        setMembers((prev) =>
-          prev.map((m) => (m.id === relationshipId ? { ...m, permissions: res.permissions } : m))
-        );
-      }
-    } catch (err) {
-      console.error('Toggle permission error:', err);
-    } finally {
-      setUpdatingPermId(null);
+    const res = await familyService.updatePermissions(relationshipId, updated);
+    setUpdatingPermId(null);
+
+    if (res.success && res.data) {
+      setMembers((prev) =>
+        prev.map((m) => (m.id === relationshipId ? { ...m, permissions: res.data } : m))
+      );
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Card className="p-10 text-center bg-brand-50/50 border-brand-100 flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-2xl font-bold text-brand-800">Loading family access...</p>
-        </Card>
-      </div>
-    );
+    return <LoadingState message={t('family.sending')} />;
   }
 
-  return (
-    <div className="flex flex-col gap-6 md:gap-8 pb-8">
-      {/* Header */}
-      <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-2">{t('family.family')}</h1>
-          <p className="text-xl text-gray-600 font-medium">{t('family.familyAccessDesc')}</p>
-        </div>
-        <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
-          <Heart className="w-8 h-8" />
-        </div>
-      </div>
+  const isSeniorSharingLiveLocation = members.some(
+    (rel) => rel.permissions?.shareLiveLocation && rel.permissions?.isLocationSharingActive
+  );
 
-      {/* Incoming Invitations Banner (For family member / recipient) */}
+  return (
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col gap-8">
+      {/* Page Title & Header */}
+      <SectionHeader
+        title={t('family.myFamily')}
+        subtitle={t('family.familyAccessDesc')}
+        icon={<Heart className="w-9 h-9 text-brand-600" />}
+      />
+
+      {/* Incoming Invitations Banner */}
       {incomingInvites.length > 0 && (
-        <Card className="bg-purple-50 border-purple-200 p-6 md:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Clock className="w-8 h-8 text-purple-600" />
-            <h2 className="text-2xl font-extrabold text-purple-900">{t('family.pendingInvitations')}</h2>
-          </div>
+        <Card className="p-6 md:p-8 bg-purple-50/80 border-2 border-purple-200 shadow-sm flex flex-col gap-4 rounded-3xl">
+          <SectionHeader
+            title={`${t('family.pendingInvitations')} (${incomingInvites.length})`}
+            icon={<Clock className="w-7 h-7 text-purple-700 animate-spin" />}
+          />
           <div className="flex flex-col gap-4">
             {incomingInvites.map((inv) => (
-              <div key={inv.id} className="bg-white p-5 rounded-2xl border border-purple-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900">{inv.parent?.name || 'Senior Parent'}</h3>
-                  <p className="text-lg text-gray-500">{inv.parent?.email || inv.parent?.phone || ''}</p>
+              <div key={inv.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white rounded-2xl border border-purple-100 shadow-sm gap-4">
+                <div className="flex items-center gap-3">
+                  <Avatar name={inv.parent?.name || 'Senior Parent'} size="lg" colorScheme="purple" />
+                  <div>
+                    <h4 className="text-xl font-black text-gray-900">{inv.parent?.name || 'Senior Parent'}</h4>
+                    <p className="text-sm text-gray-500 font-medium">{inv.parent?.city || inv.parent?.email}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                   <Button
-                    onClick={() => handleAcceptInvite(inv.id)}
-                    className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 flex-1 sm:flex-initial"
+                    onClick={() => handleRespondInvite(inv.id, true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-5 py-2.5 rounded-xl flex-1 sm:flex-none flex items-center justify-center gap-2 text-base shadow-sm"
                   >
-                    <CheckCircle className="w-5 h-5" /> {t('family.accept')}
+                    <CheckCircle className="w-5 h-5" />
+                    {t('family.accept')}
                   </Button>
                   <Button
-                    onClick={() => handleRejectInvite(inv.id)}
+                    onClick={() => handleRespondInvite(inv.id, false)}
                     variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-100 font-bold px-6 py-3 rounded-xl flex items-center gap-2 flex-1 sm:flex-initial"
+                    className="border-purple-200 text-purple-800 hover:bg-purple-100 font-bold px-4 py-2.5 rounded-xl flex-1 sm:flex-none flex items-center justify-center gap-2 text-base"
                   >
-                    <XCircle className="w-5 h-5" /> {t('family.reject')}
+                    <XCircle className="w-5 h-5" />
+                    {t('family.reject')}
                   </Button>
                 </div>
               </div>
@@ -228,58 +330,105 @@ export function Family() {
         </Card>
       )}
 
-      {/* Invite Family Member Section (Parent View) */}
-      <Card className="p-6 md:p-8 border-gray-200">
-        <div className="flex items-center gap-3 mb-4">
-          <UserPlus className="w-7 h-7 text-brand-600" />
-          <h2 className="text-2xl font-extrabold text-gray-900">{t('family.inviteFamilyMember')}</h2>
-        </div>
+      {/* SENIOR VIEW: Family Overview Bar */}
+      {currentUser?.role === 'SENIOR' && (
+        <Card className="p-6 md:p-8 bg-gradient-to-r from-brand-700 to-brand-900 text-white border-none shadow-lg rounded-3xl">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{t('family.familyOverview')}</h2>
+                <Badge variant="purple" size="md">
+                  {t('family.connectedMembersCount', { count: members.length })}
+                </Badge>
+              </div>
+              <p className="text-brand-100 text-base sm:text-lg font-medium">
+                {isSeniorSharingLiveLocation
+                  ? t('family.liveLocationSharingDesc')
+                  : t('family.parentSharingNotice')}
+              </p>
+            </div>
+
+            <div className="shrink-0 flex items-center gap-4">
+              <StatusPill
+                status={isSeniorSharingLiveLocation ? 'live' : 'offline'}
+                label={isSeniorSharingLiveLocation ? t('family.liveSharingGlobalOn') : t('family.liveSharingGlobalOff')}
+                size="lg"
+                className="bg-white/10 text-white border-white/20"
+              />
+              {isSeniorSharingLiveLocation && (
+                <Button
+                  onClick={async () => {
+                    for (const m of members) {
+                      if (m.permissions?.isLocationSharingActive) {
+                        await familyService.updatePermissions(m.id, {
+                          shareActivities: m.permissions.shareActivities,
+                          shareLiveLocation: m.permissions.shareLiveLocation,
+                          isLocationSharingActive: false
+                        });
+                      }
+                    }
+                    loadData();
+                  }}
+                  className="bg-red-500 hover:bg-red-600 text-white font-extrabold px-6 py-2.5 rounded-2xl text-base shadow-md"
+                >
+                  {t('family.stopSharingButton')}
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Invite Family Member Section (Senior Parent View) */}
+      <Card className="p-6 md:p-8 flex flex-col gap-6 border-gray-200 shadow-sm rounded-3xl">
+        <SectionHeader
+          title={t('family.inviteFamilyMember')}
+          icon={<UserPlus className="w-7 h-7 text-brand-600" />}
+        />
+
         <form onSubmit={handleSendInvite} className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             value={inviteIdentifier}
             onChange={(e) => setInviteIdentifier(e.target.value)}
             placeholder={t('family.enterIdentifier')}
-            className="flex-1 px-5 py-4 text-xl rounded-2xl border-2 border-gray-200 focus:border-brand-500 focus:outline-none"
+            className="flex-1 px-5 py-3.5 text-base sm:text-lg rounded-2xl border-2 border-gray-200 focus:border-brand-500 focus:ring-0 outline-none font-medium transition-colors"
+            disabled={inviting}
           />
           <Button
             type="submit"
             disabled={inviting || !inviteIdentifier.trim()}
-            className="bg-brand-600 hover:bg-brand-700 text-white text-xl font-bold px-8 py-4 rounded-2xl flex items-center justify-center gap-2"
+            className="bg-brand-600 hover:bg-brand-700 text-white font-extrabold px-8 py-3.5 rounded-2xl text-base sm:text-lg flex items-center justify-center gap-2 shadow-md shrink-0"
           >
-            {inviting ? (
-              <span>{t('family.sending')}</span>
-            ) : (
-              <>
-                <Send className="w-5 h-5" />
-                <span>{t('family.sendInvite')}</span>
-              </>
-            )}
+            <Send className="w-5 h-5" />
+            {inviting ? t('family.sending') : t('family.sendInvite')}
           </Button>
         </form>
 
         {inviteMessage && (
-          <div className={`mt-4 p-4 rounded-xl text-lg font-bold ${
+          <div className={`p-4 rounded-2xl text-base font-bold flex items-center gap-2 ${
             inviteMessage.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
           }`}>
+            {inviteMessage.type === 'success' ? <CheckCircle className="w-5 h-5 text-green-600 shrink-0" /> : <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />}
             {inviteMessage.text}
           </div>
         )}
 
         {/* Outgoing pending invites */}
         {outgoingInvites.length > 0 && (
-          <div className="mt-6 border-t border-gray-100 pt-6">
-            <h3 className="text-xl font-bold text-gray-700 mb-3">{t('family.pendingInvitations')}</h3>
+          <div className="mt-2 border-t border-gray-100 pt-6 flex flex-col gap-3">
+            <h3 className="text-lg font-bold text-gray-700">{t('family.pendingInvitations')}</h3>
             <div className="flex flex-col gap-3">
               {outgoingInvites.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <div>
-                    <p className="text-xl font-bold text-gray-900">{inv.member?.name || inv.member?.email || 'Invited Family Member'}</p>
-                    <p className="text-sm text-gray-500">{inv.member?.email || inv.member?.phone}</p>
+                <div key={inv.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={inv.member?.name || 'Member'} size="md" colorScheme="amber" />
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">{inv.member?.name || inv.member?.email || 'Invited Family Member'}</p>
+                      <p className="text-sm text-gray-500">{inv.member?.email || inv.member?.phone}</p>
+                    </div>
                   </div>
-                  <span className="bg-yellow-100 text-yellow-800 text-base font-bold px-4 py-1.5 rounded-full">
-                    {t('family.statusPending')}
-                  </span>
+                  <StatusPill status="pending" label={t('family.statusPending')} size="sm" />
                 </div>
               ))}
             </div>
@@ -287,147 +436,24 @@ export function Family() {
         )}
       </Card>
 
-      {/* Connected Family Members (Parent View) */}
+      {/* Connected Family Members (Parent Controls View) */}
       <div className="flex flex-col gap-6">
-        <h2 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-          <Users className="w-8 h-8 text-brand-600" />
-          {t('family.parentControls')}
-        </h2>
+        <SectionHeader
+          title={t('family.connectedFamily')}
+          subtitle={t('family.parentControls')}
+          icon={<Users className="w-8 h-8 text-brand-600" />}
+          badge={<Badge variant="primary">{members.length}</Badge>}
+        />
 
         {members.length === 0 ? (
-          <Card className="p-10 text-center text-gray-500 text-xl font-medium border-dashed border-2 border-gray-200">
-            {t('family.noFamilyMembers')}
-          </Card>
+          <EmptyState
+            title={t('family.noFamilyMembers')}
+            description={t('family.familyAccessDesc')}
+            icon={<Users className="w-8 h-8 text-brand-600" />}
+          />
         ) : (
-          members.map((rel) => {
-            const perms = rel.permissions || {
-              shareActivities: false,
-              shareLiveLocation: false,
-              isLocationSharingActive: false
-            };
-
-            return (
-              <Card key={rel.id} className="p-6 md:p-8 flex flex-col gap-6 border-gray-200 shadow-sm">
-                {/* Family member user info */}
-                <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-brand-100 text-brand-700 rounded-2xl flex items-center justify-center text-2xl font-bold border-2 border-brand-200">
-                      {rel.member?.name ? rel.member.name[0].toUpperCase() : 'F'}
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-extrabold text-gray-900">{rel.member?.name || 'Family Member'}</h3>
-                      <p className="text-lg text-gray-500 font-medium">{rel.member?.email || rel.member?.phone}</p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => handleRemoveMember(rel.id)}
-                    variant="outline"
-                    className="border-red-200 text-red-600 hover:bg-red-50 p-3 rounded-xl"
-                    title={t('family.remove')}
-                  >
-                    <Trash2 className="w-6 h-6" />
-                  </Button>
-                </div>
-
-                {/* Permissions controls */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Activity Sharing Toggle */}
-                  <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 ${
-                    perms.shareActivities ? 'bg-brand-50 border-brand-300' : 'bg-gray-50 border-gray-200'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Activity className={`w-6 h-6 ${perms.shareActivities ? 'text-brand-600' : 'text-gray-400'}`} />
-                        <span className="text-xl font-bold text-gray-900">{t('family.shareActivities')}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className={`text-base font-extrabold ${perms.shareActivities ? 'text-brand-700' : 'text-gray-500'}`}>
-                        {perms.shareActivities ? t('family.activitiesShared') : t('family.activitiesPrivate')}
-                      </span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={perms.shareActivities}
-                          disabled={updatingPermId === rel.id}
-                          onChange={() => handleTogglePermission(rel.id, 'shareActivities', perms.shareActivities, perms)}
-                        />
-                        <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-brand-600"></div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Live Location Permission Toggle */}
-                  <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 ${
-                    perms.shareLiveLocation ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <MapPin className={`w-6 h-6 ${perms.shareLiveLocation ? 'text-blue-600' : 'text-gray-400'}`} />
-                        <span className="text-xl font-bold text-gray-900">{t('family.shareLiveLocation')}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className={`text-base font-extrabold ${perms.shareLiveLocation ? 'text-blue-700' : 'text-gray-500'}`}>
-                        {perms.shareLiveLocation ? t('family.liveLocationOn') : t('family.liveLocationOff')}
-                      </span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={perms.shareLiveLocation}
-                          disabled={updatingPermId === rel.id}
-                          onChange={() => handleTogglePermission(rel.id, 'shareLiveLocation', perms.shareLiveLocation, perms)}
-                        />
-                        <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Location Active State Toggle */}
-                  <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 ${
-                    perms.isLocationSharingActive ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-200'
-                  } ${!perms.shareLiveLocation ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Radio className={`w-6 h-6 ${perms.isLocationSharingActive ? 'text-green-600 animate-pulse' : 'text-gray-400'}`} />
-                        <span className="text-xl font-bold text-gray-900">{t('family.locationActive')}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className={`text-base font-extrabold ${perms.isLocationSharingActive ? 'text-green-700' : 'text-gray-500'}`}>
-                        {perms.isLocationSharingActive ? t('family.startSharing') : t('family.stopSharing')}
-                      </span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={perms.isLocationSharingActive}
-                          disabled={updatingPermId === rel.id || !perms.shareLiveLocation}
-                          onChange={() => handleTogglePermission(rel.id, 'isLocationSharingActive', perms.isLocationSharingActive, perms)}
-                        />
-                        <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-green-600"></div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })
-        )}
-      </div>
-
-      {/* Connected Parents View (For Family Member user account) */}
-      {parents.length > 0 && (
-        <div className="flex flex-col gap-6 mt-6">
-          <h2 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-            <Heart className="w-8 h-8 text-purple-600" />
-            {t('family.familyMemberView')}
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {parents.map((rel) => {
+          <div className="grid grid-cols-1 gap-6">
+            {members.map((rel) => {
               const perms = rel.permissions || {
                 shareActivities: false,
                 shareLiveLocation: false,
@@ -435,42 +461,143 @@ export function Family() {
               };
 
               return (
-                <Card key={rel.id} className="p-6 flex flex-col gap-4 border-gray-200 shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-xl font-bold">
-                      {rel.parent?.name ? rel.parent.name[0].toUpperCase() : 'P'}
+                <Card key={rel.id} className="p-6 md:p-8 flex flex-col gap-6 border-gray-200 shadow-sm rounded-3xl hover:shadow-md transition-all">
+                  {/* Member Details Bar */}
+                  <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                    <div className="flex items-center gap-4">
+                      <Avatar name={rel.member?.name || 'Family Member'} size="xl" colorScheme="brand" />
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-2xl font-extrabold text-gray-900">{rel.member?.name || 'Family Member'}</h3>
+                          <StatusPill status="connected" label={t('family.statusAccepted')} size="sm" />
+                        </div>
+                        <p className="text-base text-gray-500 font-medium">{rel.member?.email || rel.member?.phone}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-900">{rel.parent?.name || 'Parent Senior'}</h3>
-                      <p className="text-lg text-gray-500">{rel.parent?.city || rel.parent?.email}</p>
-                    </div>
+                    <Button
+                      onClick={() => confirmRemoveMember(rel.id, rel.member?.name || 'Family Member')}
+                      variant="outline"
+                      className="border-red-200 text-red-600 hover:bg-red-50 p-3 rounded-2xl shrink-0"
+                      title={t('family.remove')}
+                    >
+                      <Trash2 className="w-6 h-6" />
+                    </Button>
                   </div>
 
-                  <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-medium text-gray-600">{t('family.shareActivities')}</span>
-                      <span className={`text-base font-bold px-3 py-1 rounded-full ${
-                        perms.shareActivities ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {perms.shareActivities ? 'Enabled' : 'Disabled'}
-                      </span>
+                  {/* Granular Permission Toggles */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Share Activities Toggle */}
+                    <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 ${
+                      perms.shareActivities ? 'bg-green-50/70 border-green-300' : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <Activity className={`w-6 h-6 ${perms.shareActivities ? 'text-green-600' : 'text-gray-400'}`} />
+                        <span className="text-lg font-bold text-gray-900">{t('family.shareActivities')}</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2">
+                        <span className={`text-sm font-extrabold ${perms.shareActivities ? 'text-green-700' : 'text-gray-500'}`}>
+                          {perms.shareActivities ? t('family.activitiesShared') : t('family.activitiesPrivate')}
+                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={perms.shareActivities}
+                            disabled={updatingPermId === rel.id}
+                            onChange={() => handleTogglePermission(rel.id, 'shareActivities', perms.shareActivities, perms)}
+                          />
+                          <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-brand-600"></div>
+                        </label>
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-medium text-gray-600">{t('family.shareLiveLocation')}</span>
-                      <span className={`text-base font-bold px-3 py-1 rounded-full ${
-                        perms.shareLiveLocation ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {perms.shareLiveLocation ? 'Authorized' : 'Not Authorized'}
-                      </span>
+                    {/* Live Location Permission Toggle */}
+                    <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 ${
+                      perms.shareLiveLocation ? 'bg-blue-50/70 border-blue-300' : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <MapPin className={`w-6 h-6 ${perms.shareLiveLocation ? 'text-blue-600' : 'text-gray-400'}`} />
+                        <span className="text-lg font-bold text-gray-900">{t('family.shareLiveLocation')}</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2">
+                        <span className={`text-sm font-extrabold ${perms.shareLiveLocation ? 'text-blue-700' : 'text-gray-500'}`}>
+                          {perms.shareLiveLocation ? t('family.liveLocationOn') : t('family.liveLocationOff')}
+                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={perms.shareLiveLocation}
+                            disabled={updatingPermId === rel.id}
+                            onChange={() => handleTogglePermission(rel.id, 'shareLiveLocation', perms.shareLiveLocation, perms)}
+                          />
+                          <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Location Active State Toggle */}
+                    <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 ${
+                      perms.isLocationSharingActive ? 'bg-green-50/70 border-green-300' : 'bg-gray-50 border-gray-200'
+                    } ${!perms.shareLiveLocation ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div className="flex items-center gap-3">
+                        <Radio className={`w-6 h-6 ${perms.isLocationSharingActive ? 'text-green-600 animate-pulse' : 'text-gray-400'}`} />
+                        <span className="text-lg font-bold text-gray-900">{t('family.locationActive')}</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2">
+                        <span className={`text-sm font-extrabold ${perms.isLocationSharingActive ? 'text-green-700' : 'text-gray-500'}`}>
+                          {perms.isLocationSharingActive ? t('family.startSharing') : t('family.stopSharing')}
+                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={perms.isLocationSharingActive}
+                            disabled={updatingPermId === rel.id || !perms.shareLiveLocation}
+                            onChange={() => handleTogglePermission(rel.id, 'isLocationSharingActive', perms.isLocationSharingActive, perms)}
+                          />
+                          <div className="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </Card>
               );
             })}
           </div>
+        )}
+      </div>
+
+      {/* Connected Parents View (For Family Member user account) */}
+      {parents.length > 0 && (
+        <div className="flex flex-col gap-6 mt-4">
+          <SectionHeader
+            title={t('family.yourFamily')}
+            subtitle={t('family.familyMemberView')}
+            icon={<ShieldCheck className="w-8 h-8 text-purple-600" />}
+            badge={<Badge variant="purple">{parents.length}</Badge>}
+          />
+
+          <div className="grid grid-cols-1 gap-6">
+            {parents.map((rel) => (
+              <ParentLocationViewer key={rel.id} rel={rel} />
+            ))}
+          </div>
         </div>
       )}
+
+      {/* Confirm Remove Member Dialog */}
+      <ConfirmDialog
+        isOpen={removeDialogState.isOpen}
+        title={t('family.removeMemberTitle')}
+        description={t('family.removeMemberDesc', { name: removeDialogState.memberName })}
+        confirmText={t('family.remove')}
+        cancelText={t('profile.cancel')}
+        variant="danger"
+        isLoading={isRemoving}
+        onConfirm={handleExecuteRemoveMember}
+        onCancel={() => setRemoveDialogState({ isOpen: false, relId: null, memberName: '' })}
+      />
     </div>
   );
 }
