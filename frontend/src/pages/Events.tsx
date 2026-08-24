@@ -337,9 +337,6 @@ export function Events() {
             className="border-gray-200 rounded-xl bg-white px-3 py-2 text-sm focus:ring-brand-500 w-full sm:w-auto min-w-0 sm:min-w-[120px]"
           >
             <option value="All">{t('events.anyDistance')}</option>
-            <option value="5">Within 5 km</option>
-            <option value="10">Within 10 km</option>
-            <option value="25">Within 25 km</option>
           </select>
 
           <select
