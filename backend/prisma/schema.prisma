@@ -78,6 +78,10 @@ model User {
   savedEvents      SavedEvent[]
   eventMessages    EventMessage[]
 
+  // Family relationships
+  familyAsParent   FamilyRelationship[] @relation("ParentRelationships")
+  familyAsMember   FamilyRelationship[] @relation("FamilyMemberRelationships")
+
   @@index([createdAt])
 }
 
@@ -263,4 +267,32 @@ model EventMessage {
   createdAt DateTime @default(now())
 
   @@index([eventId, createdAt])
+}
+
+model FamilyRelationship {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  parentId    String   @db.ObjectId
+  parent      User     @relation("ParentRelationships", fields: [parentId], references: [id], onDelete: Cascade)
+  memberId    String   @db.ObjectId
+  member      User     @relation("FamilyMemberRelationships", fields: [memberId], references: [id], onDelete: Cascade)
+  status      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, REVOKED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions FamilyPermissions?
+
+  @@unique([parentId, memberId])
+  @@index([parentId, status])
+  @@index([memberId, status])
+}
+
+model FamilyPermissions {
+  id                      String             @id @default(auto()) @map("_id") @db.ObjectId
+  relationshipId          String             @unique @db.ObjectId
+  relationship            FamilyRelationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  shareActivities         Boolean            @default(false)
+  shareLiveLocation       Boolean            @default(false)
+  isLocationSharingActive Boolean            @default(false)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 }
