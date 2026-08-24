@@ -50,11 +50,6 @@ export function Home() {
           </div>
           <span className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">{t('home.saathi')}</span>
         </div>
-        <div className="flex items-center gap-2 md:gap-4">
-          <Button variant="ghost" className="text-base sm:text-lg md:text-xl font-semibold text-slate-700 hover:text-brand-700 hover:bg-brand-50 px-4 py-2 md:px-6 md:py-3 h-auto" onClick={() => navigate('/login')}>
-            {t('home.login')}
-          </Button>
-        </div>
       </header>
 
       <main className="flex-1 flex flex-col w-full items-center overflow-hidden">
@@ -77,11 +72,18 @@ export function Home() {
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row w-full sm:w-auto gap-4 sm:gap-5 mt-6 md:mt-8 px-4 sm:px-0">
-              <Button className="text-lg sm:text-xl md:text-2xl px-6 sm:px-8 md:px-12 py-5 sm:py-6 md:py-8 shadow-xl shadow-brand-600/20 rounded-2xl w-full sm:w-auto transition-transform hover:scale-[1.02] active:scale-[0.98] h-auto" onClick={() => navigate('/onboarding')}>
-                {t('home.getStarted')} <ArrowRight className="ml-2 sm:ml-3 w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
+              <Button
+                className="text-lg sm:text-xl md:text-2xl px-6 sm:px-8 md:px-12 py-5 sm:py-6 md:py-8 shadow-xl shadow-brand-600/20 rounded-2xl w-full sm:w-auto transition-transform hover:scale-[1.02] active:scale-[0.98] h-auto font-bold"
+                onClick={() => navigate('/register?role=SENIOR')}
+              >
+                Senior Citizen <ArrowRight className="ml-2 sm:ml-3 w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
               </Button>
-              <Button variant="outline" className="text-lg sm:text-xl md:text-2xl px-6 sm:px-8 md:px-12 py-5 sm:py-6 md:py-8 shadow-sm rounded-2xl w-full sm:w-auto border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-transform hover:scale-[1.02] active:scale-[0.98] h-auto" onClick={() => navigate('/family')}>
-                {t('home.familyMember')}
+              <Button
+                variant="outline"
+                className="text-lg sm:text-xl md:text-2xl px-6 sm:px-8 md:px-12 py-5 sm:py-6 md:py-8 shadow-sm rounded-2xl w-full sm:w-auto border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-transform hover:scale-[1.02] active:scale-[0.98] h-auto font-bold"
+                onClick={() => navigate('/register?role=FAMILY')}
+              >
+                I'm a Family Member
               </Button>
             </motion.div>
           </motion.div>

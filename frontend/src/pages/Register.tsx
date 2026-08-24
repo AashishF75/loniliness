@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Calendar, ArrowRight, AlertCircle, MapPin } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Mail, Lock, User, Calendar, ArrowRight, AlertCircle, MapPin, Heart, Users } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -10,6 +10,78 @@ import { useTranslation } from 'react-i18next';
 export function Register() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const paramRole = searchParams.get('role')?.toUpperCase();
+
+  // Role selection screen if no valid query parameter is provided
+  if (paramRole !== 'SENIOR' && paramRole !== 'FAMILY') {
+    return (
+      <div className="flex flex-col gap-8 pb-8 max-w-xl mx-auto w-full pt-4 md:pt-12">
+        <div className="text-center">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-brand-900 mb-4">
+            Choose how you want to register
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-600 font-medium">
+            Please select your account type to proceed to registration.
+          </p>
+        </div>
+
+        <Card className="p-6 md:p-10 shadow-lg flex flex-col gap-6">
+          <button
+            onClick={() => navigate('/register?role=SENIOR')}
+            className="p-6 rounded-3xl border-2 border-brand-200 bg-brand-50 hover:bg-brand-100 hover:border-brand-500 transition-all flex items-center justify-between group shadow-sm text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-brand-600 text-white rounded-2xl flex items-center justify-center font-bold">
+                <Users className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 group-hover:text-brand-900">
+                  Senior Citizen
+                </h3>
+                <p className="text-gray-600 text-base font-medium">
+                  Aged 50+ • Join our community to find companions nearby
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="w-7 h-7 text-brand-600 group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          <button
+            onClick={() => navigate('/register?role=FAMILY')}
+            className="p-6 rounded-3xl border-2 border-brand-200 bg-brand-50 hover:bg-brand-100 hover:border-brand-500 transition-all flex items-center justify-between group shadow-sm text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-brand-600 text-white rounded-2xl flex items-center justify-center font-bold">
+                <Heart className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 group-hover:text-brand-900">
+                  Family Member
+                </h3>
+                <p className="text-gray-600 text-base font-medium">
+                  All ages welcome • Stay connected with your senior loved ones
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="w-7 h-7 text-brand-600 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </Card>
+
+        <div className="text-center">
+          <p className="text-xl text-gray-600 font-medium">
+            Already have an account?{' '}
+            <button onClick={() => navigate('/login')} className="text-brand-700 font-bold hover:underline">
+              Log in
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const role: 'SENIOR' | 'FAMILY' = paramRole === 'FAMILY' ? 'FAMILY' : 'SENIOR';
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -92,7 +164,14 @@ export function Register() {
       setError('Please fill in all fields.');
       return;
     }
-    if ((formData as any).role !== 'FAMILY' && parseInt(formData.age) < 50) {
+
+    const parsedAge = parseInt(formData.age, 10);
+    if (isNaN(parsedAge) || parsedAge <= 0) {
+      setError('Please enter a valid age.');
+      return;
+    }
+
+    if (role === 'SENIOR' && parsedAge < 50) {
       setError('Saathi is designed for senior citizens aged 50 and above.');
       return;
     }
@@ -100,11 +179,15 @@ export function Register() {
     setError('');
     setLoading(true);
 
-    const res = await authService.register(formData);
+    const res = await authService.register({ ...formData, role });
     setLoading(false);
 
     if (res.success) {
-      navigate('/language-selection');
+      if (role === 'FAMILY') {
+        navigate('/family');
+      } else {
+        navigate('/language-selection');
+      }
     } else {
       setError(res.message || 'Registration failed. Please try again.');
     }
@@ -113,8 +196,14 @@ export function Register() {
   return (
     <div className="flex flex-col gap-8 pb-8 max-w-xl mx-auto w-full pt-4 md:pt-12">
       <div className="text-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-brand-900 mb-4">{t('auth.createAccount')}</h1>
-        <p className="text-xl md:text-2xl text-gray-600 font-medium">Join our community and find companions nearby.</p>
+        <h1 className="text-4xl md:text-5xl font-extrabold text-brand-900 mb-4">
+          {role === 'SENIOR' ? 'Register as a Senior Citizen' : 'Register as a Family Member'}
+        </h1>
+        <p className="text-xl md:text-2xl text-gray-600 font-medium">
+          {role === 'SENIOR'
+            ? 'Join our community for senior citizens to find companions nearby.'
+            : 'Register as a Family Member to stay connected with your senior loved ones.'}
+        </p>
       </div>
 
       <Card className="p-6 md:p-10 shadow-lg">
@@ -226,9 +315,9 @@ export function Register() {
 
       <div className="text-center">
         <p className="text-xl text-gray-600 font-medium">
-          {t('auth.haveAccount')}{' '}
+          Already have an account?{' '}
           <button onClick={() => navigate('/login')} className="text-brand-700 font-bold hover:underline">
-            {t('auth.login')}
+            Log in
           </button>
         </p>
       </div>
