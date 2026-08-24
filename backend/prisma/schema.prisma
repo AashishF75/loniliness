@@ -33,6 +33,7 @@ model User {
   locality      String?
   latitude      Float?
   longitude     Float?
+  locationGeoJson Json?
   languages     String[]
   bio           String?
   verified      Boolean   @default(false)
@@ -210,6 +211,7 @@ model Event {
   location        String
   latitude        Float?
   longitude       Float?
+  locationGeoJson Json?
   date            DateTime
   startTime       String
   endTime         String

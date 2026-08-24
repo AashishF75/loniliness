@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../db';
+import { toGeoJsonPoint } from '../utils/geo';
 
 // Helper to determine event status dynamically
 function getEventStatus(event: any) {
@@ -71,14 +72,18 @@ export const createEvent = async (req: Request | any, res: Response): Promise<vo
       return;
     }
 
+    const latNum = latitude ? parseFloat(latitude) : null;
+    const lonNum = longitude ? parseFloat(longitude) : null;
+
     const newEvent = await prisma.event.create({
       data: {
         title,
         description,
         category,
         location,
-        latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null,
+        latitude: latNum,
+        longitude: lonNum,
+        locationGeoJson: toGeoJsonPoint(latNum, lonNum) as any,
         date: eventDate,
         startTime,
         endTime,
@@ -109,187 +114,235 @@ export const getEvents = async (req: Request | any, res: Response): Promise<void
     // Filters
     const { category, search, date, latitude, longitude, radius, filter, sort } = req.query;
 
-    let whereClause: any = { status: { not: 'REMOVED' } };
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
 
-    if (category && category !== 'All') {
-      whereClause.category = category;
-    }
-
-    if (search) {
-      whereClause.OR = [
-        { title: { contains: search as string, mode: 'insensitive' } },
-        { category: { contains: search as string, mode: 'insensitive' } },
-        { location: { contains: search as string, mode: 'insensitive' } }
-      ];
-    }
-
-    if (date === 'upcoming') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      whereClause.date = { gte: today };
-    }
-
-    if (filter === 'created' && userId) {
-      whereClause.createdById = userId;
-    }
-    if (filter === 'joined' && userId) {
-      whereClause.participants = {
-        some: { userId }
-      };
-    }
-    if (filter === 'mine' && userId) {
-      whereClause.OR = [
-        { createdById: userId },
-        { participants: { some: { userId } } }
-      ];
-    }
-    if (filter === 'saved' && userId) {
-      whereClause.savedBy = {
-        some: { userId }
-      };
-    }
-
-    // Get blocks involving current user to exclude their events
     let blockedUserIds: string[] = [];
     let currentUser: any = null;
+
     if (userId) {
       currentUser = await prisma.user.findUnique({ where: { id: userId }, include: { hobbies: true } });
       const userBlocks = await prisma.block.findMany({
         where: { OR: [{ blockerId: userId }, { blockedId: userId }] }
       });
       blockedUserIds = userBlocks.map((b: any) => b.blockerId === userId ? b.blockedId : b.blockerId);
-
-      if (blockedUserIds.length > 0) {
-        whereClause.createdById = { notIn: blockedUserIds };
-      }
     }
 
-    // Apply Bounding Box if radius is provided
     let userLatForDist = latitude ? parseFloat(latitude as string) : currentUser?.latitude;
     let userLonForDist = longitude ? parseFloat(longitude as string) : currentUser?.longitude;
+    const hasUserLocation = userLatForDist !== null && userLonForDist !== null && !isNaN(userLatForDist) && !isNaN(userLonForDist);
 
-    if (radius && radius !== 'All' && userLatForDist && userLonForDist) {
-      const maxRadius = parseFloat(radius as string);
-      const bbox = getBoundingBox(userLatForDist, userLonForDist, maxRadius);
-      whereClause.latitude = { gte: bbox.minLat, lte: bbox.maxLat };
-      whereClause.longitude = { gte: bbox.minLon, lte: bbox.maxLon };
-    }
+    let formattedEvents: any[] = [];
+    let totalCount = 0;
 
-    const events = await prisma.event.findMany({
-      where: whereClause,
-      include: {
-        creator: {
-          select: { id: true, name: true, avatar: true }
-        },
-        _count: {
-          select: { participants: true }
-        },
-        participants: userId ? {
-          where: { userId },
-          select: { userId: true }
-        } : false,
-        savedBy: userId ? {
-          where: { userId }
-        } : false
-      },
-      orderBy: { date: 'asc' }
-    });
-
-    // Formatting and distance calculation
-    let formattedEvents = events.map((event: any) => {
-      const { latitude: eLat, longitude: eLon, ...safeEvent } = event;
-
-      let distance = null;
-      if (latitude && longitude && eLat && eLon) {
-        distance = calculateDistance(
-          parseFloat(latitude as string),
-          parseFloat(longitude as string),
-          eLat,
-          eLon
-        );
-      } else if (currentUser?.latitude && currentUser?.longitude && eLat && eLon) {
-        distance = calculateDistance(
-          currentUser.latitude,
-          currentUser.longitude,
-          eLat,
-          eLon
-        );
-      }
-
-      // Recommend if matching interest
-      let recommended = false;
-      if (currentUser?.hobbies && currentUser.hobbies.length > 0) {
-        const userHobbies = currentUser.hobbies.map((h: any) => h.name.toLowerCase());
-        if (userHobbies.includes(event.category.toLowerCase())) {
-          recommended = true;
-        } else {
-          // check if title contains hobby
-          recommended = userHobbies.some((h: string) => event.title.toLowerCase().includes(h));
-        }
-      }
-
-      return {
-        ...safeEvent,
-        distance: distance ? parseFloat(distance.toFixed(1)) : null,
-        participantCount: event._count?.participants || 0,
-        hasJoined: userId && event.participants ? event.participants.length > 0 : false,
-        isSaved: userId ? event.savedBy && event.savedBy.length > 0 : false,
-        recommended,
-        dynamicStatus: getEventStatus(event)
+    if (hasUserLocation && (sort === 'nearest' || !sort)) {
+      // -------------------------------------------------------------
+      // DATABASE-SIDE GEOSPATIAL AGGREGATION FOR EVENTS
+      // -------------------------------------------------------------
+      const blockedOids = blockedUserIds.map((id: string) => ({ $oid: id }));
+      const eventFilter: any = {
+        status: { $ne: 'REMOVED' }
       };
-    });
 
-    if (filter === 'recommended') {
-      formattedEvents = formattedEvents.filter((e: any) => e.recommended);
-    }
+      if (category && category !== 'All') {
+        eventFilter.category = category;
+      }
 
-    // Distance filter
-    if (radius && radius !== 'All') {
-      const maxRadius = parseFloat(radius as string);
-      formattedEvents = formattedEvents.filter((e: any) => e.distance !== null && e.distance <= maxRadius);
-    }
+      if (search) {
+        const s = (search as string).toLowerCase();
+        eventFilter.$or = [
+          { title: { $regex: s, $options: 'i' } },
+          { category: { $regex: s, $options: 'i' } },
+          { location: { $regex: s, $options: 'i' } }
+        ];
+      }
 
-    // Sorting
-    if (sort === 'nearest') {
-      formattedEvents.sort((a: any, b: any) => {
-        if (a.distance === null) return 1;
-        if (b.distance === null) return -1;
-        return a.distance - b.distance;
+      if (date === 'upcoming') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        eventFilter.date = { $gte: { $date: today.toISOString() } };
+      }
+
+      if (blockedOids.length > 0) {
+        eventFilter.createdById = { $nin: blockedOids };
+      }
+
+      if (filter === 'created' && userId) {
+        eventFilter.createdById = { $oid: userId };
+      }
+
+      const pipeline: any[] = [
+        {
+          $geoNear: {
+            near: { type: 'Point', coordinates: [userLonForDist as number, userLatForDist as number] },
+            distanceField: 'distanceMeters',
+            spherical: true,
+            query: eventFilter
+          }
+        },
+        {
+          $addFields: {
+            distance: { $divide: ['$distanceMeters', 1000] }
+          }
+        }
+      ];
+
+      pipeline.push({
+        $facet: {
+          metadata: [{ $count: 'total' }],
+          data: [{ $skip: offset }, { $limit: limit }]
+        }
       });
-    } else if (sort === 'soonest') {
-      formattedEvents.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    } else if (sort === 'available') {
-      formattedEvents.sort((a: any, b: any) => {
-        const aAvail = a.maxParticipants - a.participantCount;
-        const bAvail = b.maxParticipants - b.participantCount;
-        return bAvail - aAvail;
-      });
-    } else if (sort === 'recommended') {
-      formattedEvents.sort((a: any, b: any) => {
-        // High priority: recommended
-        if (a.recommended && !b.recommended) return -1;
-        if (!a.recommended && b.recommended) return 1;
-        // High priority: upcoming vs completed
-        if (a.dynamicStatus === 'UPCOMING' && b.dynamicStatus !== 'UPCOMING') return -1;
-        if (a.dynamicStatus !== 'UPCOMING' && b.dynamicStatus === 'UPCOMING') return 1;
-        // Then by distance
-        if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
-        return 0;
-      });
-    }
 
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
-    const paginatedEvents = formattedEvents.slice(offset, offset + limit);
+      const aggResult: any = await prisma.event.aggregateRaw({ pipeline });
+      const facetObj = Array.isArray(aggResult) && aggResult.length > 0 ? aggResult[0] : null;
+      const rawEvents = facetObj && Array.isArray(facetObj.data) ? facetObj.data : [];
+      totalCount = facetObj && Array.isArray(facetObj.metadata) && facetObj.metadata.length > 0
+        ? facetObj.metadata[0].total
+        : 0;
+
+      const eventIds = rawEvents.map((e: any) => e._id?.$oid || e._id?.toString() || e.id);
+
+      // Fetch relational metadata for the returned 20-50 page slice only
+      const relationalEvents = await prisma.event.findMany({
+        where: { id: { in: eventIds } },
+        include: {
+          creator: { select: { id: true, name: true, avatar: true } },
+          _count: { select: { participants: true } },
+          participants: userId ? { where: { userId }, select: { userId: true } } : false,
+          savedBy: userId ? { where: { userId } } : false
+        }
+      });
+
+      const relationalMap = new Map<string, any>();
+      relationalEvents.forEach(e => relationalMap.set(e.id, e));
+
+      formattedEvents = rawEvents.map((rawE: any) => {
+        const eId = rawE._id?.$oid || rawE._id?.toString() || rawE.id;
+        const relE = relationalMap.get(eId) || {};
+
+        const distance = rawE.distance !== undefined ? parseFloat(rawE.distance.toFixed(1)) : null;
+
+        let recommended = false;
+        if (currentUser?.hobbies && currentUser.hobbies.length > 0) {
+          const userHobbies = currentUser.hobbies.map((h: any) => h.name.toLowerCase());
+          const cat = rawE.category || relE.category || '';
+          const tit = rawE.title || relE.title || '';
+          if (userHobbies.includes(cat.toLowerCase())) {
+            recommended = true;
+          } else {
+            recommended = userHobbies.some((h: string) => tit.toLowerCase().includes(h));
+          }
+        }
+
+        return {
+          id: eId,
+          title: rawE.title || relE.title,
+          description: rawE.description || relE.description,
+          category: rawE.category || relE.category,
+          location: rawE.location || relE.location,
+          date: relE.date || rawE.date?.$date || rawE.date,
+          startTime: rawE.startTime || relE.startTime,
+          endTime: rawE.endTime || relE.endTime,
+          maxParticipants: rawE.maxParticipants || relE.maxParticipants,
+          status: rawE.status || relE.status,
+          createdById: rawE.createdById?.$oid || rawE.createdById || relE.createdById,
+          creator: relE.creator || null,
+          distance,
+          participantCount: relE._count?.participants || 0,
+          hasJoined: userId && relE.participants ? relE.participants.length > 0 : false,
+          isSaved: userId ? relE.savedBy && relE.savedBy.length > 0 : false,
+          recommended,
+          dynamicStatus: getEventStatus(relE.id ? relE : rawE)
+        };
+      });
+
+      if (filter === 'recommended') {
+        formattedEvents = formattedEvents.filter((e: any) => e.recommended);
+      }
+    } else {
+      // -------------------------------------------------------------
+      // STANDARD PRISMA DATABASE QUERY FOR EVENTS (WITH DB PAGINATION)
+      // -------------------------------------------------------------
+      let whereClause: any = { status: { not: 'REMOVED' } };
+      if (category && category !== 'All') whereClause.category = category;
+      if (search) {
+        whereClause.OR = [
+          { title: { contains: search as string, mode: 'insensitive' } },
+          { category: { contains: search as string, mode: 'insensitive' } },
+          { location: { contains: search as string, mode: 'insensitive' } }
+        ];
+      }
+      if (date === 'upcoming') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        whereClause.date = { gte: today };
+      }
+      if (filter === 'created' && userId) whereClause.createdById = userId;
+      if (filter === 'joined' && userId) whereClause.participants = { some: { userId } };
+      if (filter === 'mine' && userId) whereClause.OR = [{ createdById: userId }, { participants: { some: { userId } } }];
+      if (filter === 'saved' && userId) whereClause.savedBy = { some: { userId } };
+      if (blockedUserIds.length > 0) whereClause.createdById = { notIn: blockedUserIds };
+
+      totalCount = await prisma.event.count({ where: whereClause });
+
+      let orderByClause: any = { date: 'asc' };
+      if (sort === 'soonest') orderByClause = { date: 'asc' };
+
+      const events = await prisma.event.findMany({
+        where: whereClause,
+        skip: offset,
+        take: limit,
+        include: {
+          creator: { select: { id: true, name: true, avatar: true } },
+          _count: { select: { participants: true } },
+          participants: userId ? { where: { userId }, select: { userId: true } } : false,
+          savedBy: userId ? { where: { userId } } : false
+        },
+        orderBy: orderByClause
+      });
+
+      formattedEvents = events.map((event: any) => {
+        const { latitude: eLat, longitude: eLon, locationGeoJson: _g, ...safeEvent } = event;
+        let distance = null;
+        if (userLatForDist && userLonForDist && eLat && eLon) {
+          distance = calculateDistance(userLatForDist, userLonForDist, eLat, eLon);
+        }
+
+        let recommended = false;
+        if (currentUser?.hobbies && currentUser.hobbies.length > 0) {
+          const userHobbies = currentUser.hobbies.map((h: any) => h.name.toLowerCase());
+          if (userHobbies.includes(event.category.toLowerCase())) {
+            recommended = true;
+          } else {
+            recommended = userHobbies.some((h: string) => event.title.toLowerCase().includes(h));
+          }
+        }
+
+        return {
+          ...safeEvent,
+          distance: distance !== null ? parseFloat(distance.toFixed(1)) : null,
+          participantCount: event._count?.participants || 0,
+          hasJoined: userId && event.participants ? event.participants.length > 0 : false,
+          isSaved: userId ? event.savedBy && event.savedBy.length > 0 : false,
+          recommended,
+          dynamicStatus: getEventStatus(event)
+        };
+      });
+
+      if (filter === 'recommended') {
+        formattedEvents = formattedEvents.filter((e: any) => e.recommended);
+      }
+    }
 
     res.json({
       success: true,
-      events: paginatedEvents,
+      events: formattedEvents,
       pagination: {
         limit,
         offset,
-        total: formattedEvents.length,
-        hasMore: offset + limit < formattedEvents.length
+        total: totalCount,
+        hasMore: offset + limit < totalCount
       }
     });
   } catch (error: any) {
@@ -511,6 +564,11 @@ export const updateEvent = async (req: Request | any, res: Response): Promise<vo
     if (location) updateData.location = location;
     if (latitude) updateData.latitude = parseFloat(latitude);
     if (longitude) updateData.longitude = parseFloat(longitude);
+    if (updateData.latitude !== undefined || updateData.longitude !== undefined) {
+      const finalLat = updateData.latitude !== undefined ? updateData.latitude : event.latitude;
+      const finalLon = updateData.longitude !== undefined ? updateData.longitude : event.longitude;
+      updateData.locationGeoJson = toGeoJsonPoint(finalLat, finalLon);
+    }
     if (date) {
       const eventDate = new Date(date);
       if (!isNaN(eventDate.getTime())) {
