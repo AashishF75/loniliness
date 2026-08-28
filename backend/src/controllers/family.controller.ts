@@ -678,8 +678,8 @@ export const getFamilyMemberEvents = async (req: Request | any, res: Response): 
     const userId = req.user?.id;
     const { targetUserId } = req.params;
 
-    if (!userId || !targetUserId) {
-      res.status(400).json({ success: false, message: 'Missing user ID' });
+    if (!userId || !targetUserId || targetUserId === 'undefined' || targetUserId.length !== 24) {
+      res.status(400).json({ success: false, message: 'Invalid target user ID' });
       return;
     }
 
