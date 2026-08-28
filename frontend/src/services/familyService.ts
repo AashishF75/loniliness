@@ -85,5 +85,10 @@ export const familyService = {
       method: 'PATCH',
       body: JSON.stringify(perms)
     });
+  },
+
+  // Get categorized events for a connected family member / parent
+  async getMemberEvents(targetUserId: string) {
+    return await fetchApi(`/family/events/${targetUserId}`);
   }
 };

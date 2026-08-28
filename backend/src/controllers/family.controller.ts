@@ -667,3 +667,114 @@ export const updateFamilyPermissions = async (req: Request | any, res: Response)
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+/**
+ * GET /api/family/events/:targetUserId
+ * Get categorized events (Upcoming, Participated/Past, Organized) for a connected family member.
+ * SECURED: Verifies user identity and ACCEPTED family relationship.
+ */
+export const getFamilyMemberEvents = async (req: Request | any, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { targetUserId } = req.params;
+
+    if (!userId || !targetUserId) {
+      res.status(400).json({ success: false, message: 'Missing user ID' });
+      return;
+    }
+
+    // Security Check: If requesting another user's events, verify active ACCEPTED relationship
+    if (userId !== targetUserId) {
+      const rel = await prisma.familyRelationship.findFirst({
+        where: {
+          OR: [
+            { parentId: targetUserId, memberId: userId },
+            { parentId: userId, memberId: targetUserId }
+          ],
+          status: 'ACCEPTED'
+        },
+        include: { permissions: true }
+      });
+
+      if (!rel) {
+        res.status(403).json({ success: false, message: 'Forbidden: No accepted family relationship with this user' });
+        return;
+      }
+
+      // Check shareActivities permission if exists
+      if (rel.permissions && rel.permissions.shareActivities === false) {
+        res.status(403).json({ success: false, message: 'Forbidden: User has disabled activity sharing' });
+        return;
+      }
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. Organized Events (Created by target user)
+    const organizedRaw = await prisma.event.findMany({
+      where: {
+        createdById: targetUserId,
+        status: { not: 'REMOVED' }
+      },
+      include: {
+        creator: { select: { id: true, name: true, avatar: true } },
+        _count: { select: { participants: true } }
+      },
+      orderBy: { date: 'desc' }
+    });
+
+    const organized = organizedRaw.map(e => ({
+      ...e,
+      participantCount: e._count?.participants || 0,
+      dynamicStatus: e.status === 'CANCELLED' ? 'CANCELLED' : new Date(e.date) < today ? 'COMPLETED' : 'UPCOMING'
+    }));
+
+    // 2. Participated Events (Target user registered/joined as participant)
+    const participations = await prisma.eventParticipant.findMany({
+      where: { userId: targetUserId },
+      include: {
+        event: {
+          include: {
+            creator: { select: { id: true, name: true, avatar: true } },
+            _count: { select: { participants: true } }
+          }
+        }
+      },
+      orderBy: { joinedAt: 'desc' }
+    });
+
+    const upcoming: any[] = [];
+    const past: any[] = [];
+
+    participations.forEach(p => {
+      if (!p.event || p.event.status === 'REMOVED') return;
+
+      const eventObj = {
+        ...p.event,
+        participantCount: p.event._count?.participants || 0,
+        joinedAt: p.joinedAt,
+        dynamicStatus: p.event.status === 'CANCELLED' ? 'CANCELLED' : new Date(p.event.date) < today ? 'COMPLETED' : 'UPCOMING'
+      };
+
+      const eventDate = new Date(p.event.date);
+      if (eventDate < today || p.event.status === 'CANCELLED') {
+        past.push(eventObj);
+      } else {
+        upcoming.push(eventObj);
+      }
+    });
+
+    res.json({
+      success: true,
+      events: {
+        upcoming,
+        past,
+        organized
+      }
+    });
+  } catch (error: any) {
+    console.error('Get family member events error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
