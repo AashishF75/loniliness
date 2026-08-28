@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 
 /**
  * Authorization helper: Checks if a family member is allowed to view parent's activities.
@@ -69,25 +67,21 @@ export const canParentShareLocation = async (parentId: string): Promise<boolean>
 
 /**
  * POST /api/family/invite
- * Senior invites a family member by email, phone, or User ID.
+ * Send a family connection request / invitation (Bidirectional: Senior -> Family or Family -> Senior).
  */
 export const sendFamilyInvitation = async (req: Request | any, res: Response): Promise<void> => {
   try {
-    const parentId = req.user?.id;
-    if (!parentId) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
-      return;
-    }
+    const senderId = req.user?.id;
+    const senderRole = req.user?.role;
 
-    // Role Security Check 1: Only SENIOR role can send family invitations
-    if (req.user?.role !== 'SENIOR') {
-      res.status(403).json({ success: false, message: 'Forbidden: Only SENIOR accounts can send family invitations' });
+    if (!senderId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
       return;
     }
 
     const { identifier } = req.body;
     if (!identifier || typeof identifier !== 'string' || !identifier.trim()) {
-      res.status(400).json({ success: false, message: 'Target family member identifier (email, phone, or User ID) is required' });
+      res.status(400).json({ success: false, message: 'Target identifier (email, phone, or User ID) is required' });
       return;
     }
 
@@ -105,36 +99,44 @@ export const sendFamilyInvitation = async (req: Request | any, res: Response): P
     });
 
     if (!targetUser) {
-      res.status(404).json({ success: false, message: 'Family member account not found' });
+      res.status(404).json({ success: false, message: 'User account not found' });
       return;
     }
 
-    if (targetUser.id === parentId) {
-      res.status(400).json({ success: false, message: 'You cannot invite yourself as a family member' });
+    if (targetUser.id === senderId) {
+      res.status(400).json({ success: false, message: 'You cannot connect with yourself' });
       return;
     }
 
-    // Role Security Check 2: Target account MUST be a FAMILY member role
-    if (targetUser.role !== 'FAMILY') {
-      res.status(403).json({ success: false, message: 'Forbidden: Family invitations can only be sent to accounts with the FAMILY role' });
+    // Role Security Check: Must be SENIOR <-> FAMILY pair
+    if (senderRole === 'SENIOR' && targetUser.role !== 'FAMILY') {
+      res.status(400).json({ success: false, message: 'Senior accounts can only connect with Family Member accounts' });
       return;
     }
+    if (senderRole === 'FAMILY' && targetUser.role !== 'SENIOR') {
+      res.status(400).json({ success: false, message: 'Family Member accounts can only connect with Senior Citizen accounts' });
+      return;
+    }
+
+    // Determine parentId (Senior) and memberId (Family)
+    const parentId = senderRole === 'SENIOR' ? senderId : targetUser.id;
+    const memberId = senderRole === 'FAMILY' ? senderId : targetUser.id;
 
     // Check existing relationship
     const existing = await prisma.familyRelationship.findUnique({
       where: {
-        parentId_memberId: { parentId, memberId: targetUser.id }
+        parentId_memberId: { parentId, memberId }
       },
       include: { permissions: true }
     });
 
     if (existing) {
       if (existing.status === 'ACCEPTED') {
-        res.status(409).json({ success: false, message: 'This family member is already connected to your account' });
+        res.status(409).json({ success: false, message: 'This family connection is already active and accepted' });
         return;
       }
       if (existing.status === 'PENDING') {
-        res.status(409).json({ success: false, message: 'An invitation is already pending for this family member' });
+        res.status(409).json({ success: false, message: 'A connection request is already pending between these accounts' });
         return;
       }
     }
@@ -142,39 +144,66 @@ export const sendFamilyInvitation = async (req: Request | any, res: Response): P
     // Upsert relationship to PENDING
     const relationship = await prisma.familyRelationship.upsert({
       where: {
-        parentId_memberId: { parentId, memberId: targetUser.id }
+        parentId_memberId: { parentId, memberId }
       },
       update: {
         status: 'PENDING'
       },
       create: {
         parentId,
-        memberId: targetUser.id,
+        memberId,
         status: 'PENDING'
       }
     });
 
-    // Ensure permissions record exists with default OFF values
+    // Ensure permissions record exists with default active values on acceptance
     await prisma.familyPermissions.upsert({
       where: { relationshipId: relationship.id },
-      update: {},
+      update: {
+        shareActivities: true,
+        shareLiveLocation: true,
+        isLocationSharingActive: true
+      },
       create: {
         relationshipId: relationship.id,
-        shareActivities: false,
-        shareLiveLocation: false,
-        isLocationSharingActive: false
+        shareActivities: true,
+        shareLiveLocation: true,
+        isLocationSharingActive: true
       }
     });
 
-    // Create notification for invited family member
+    // Also sync peer Connection table record to PENDING
+    const existingConn = await prisma.connection.findFirst({
+      where: {
+        OR: [
+          { userId: senderId, connectedId: targetUser.id },
+          { userId: targetUser.id, connectedId: senderId }
+        ]
+      }
+    });
+    if (existingConn) {
+      await prisma.connection.update({
+        where: { id: existingConn.id },
+        data: { status: 'PENDING' }
+      });
+    } else {
+      await prisma.connection.create({
+        data: { userId: senderId, connectedId: targetUser.id, status: 'PENDING' }
+      });
+    }
+
+    // Create notification for target user
     try {
       await prisma.notification.create({
         data: {
           userId: targetUser.id,
           type: 'FAMILY_INVITATION',
-          title: 'Family Access Invitation',
-          message: `${req.user.name} invited you to connect as a family member.`,
-          relatedUserId: parentId
+          title: senderRole === 'FAMILY' ? 'Family Access Request' : 'Family Access Invitation',
+          message: senderRole === 'FAMILY'
+            ? `${req.user.name} sent you a request to connect as your family member.`
+            : `${req.user.name} invited you to connect as a family member.`,
+          relatedUserId: senderId,
+          relatedConnectionId: relationship.id
         }
       });
     } catch (notifErr) {
@@ -183,12 +212,12 @@ export const sendFamilyInvitation = async (req: Request | any, res: Response): P
 
     res.status(201).json({
       success: true,
-      message: 'Family invitation sent successfully',
+      message: 'Family connection request sent successfully',
       relationship
     });
   } catch (error: any) {
     console.error('Send family invitation error:', error);
-    res.status(500).json({ success: false, message: 'Server error sending invitation' });
+    res.status(500).json({ success: false, message: 'Server error sending request' });
   }
 };
 
@@ -199,29 +228,50 @@ export const sendFamilyInvitation = async (req: Request | any, res: Response): P
 export const getFamilyInvitations = async (req: Request | any, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
+    const userRole = req.user?.role;
     if (!userId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
       return;
     }
 
-    // Incoming invitations where current user is memberId
+    // Incoming invitations: Where current user is target of pending request
+    let incomingWhere: any = {};
+    let outgoingWhere: any = {};
+
+    if (userRole === 'SENIOR') {
+      // Incoming for Senior: Requests sent by Family Members to this Senior (where parentId = userId)
+      incomingWhere = { parentId: userId, status: 'PENDING' };
+      // Outgoing for Senior: Invites sent by Senior to Family Members (where parentId = userId)
+      outgoingWhere = { parentId: userId, status: 'PENDING' };
+    } else {
+      // Incoming for Family: Invites sent by Seniors to this Family Member (where memberId = userId)
+      incomingWhere = { memberId: userId, status: 'PENDING' };
+      // Outgoing for Family: Requests sent by Family Member to Seniors (where memberId = userId)
+      outgoingWhere = { memberId: userId, status: 'PENDING' };
+    }
+
     const incoming = await prisma.familyRelationship.findMany({
-      where: { memberId: userId, status: 'PENDING' },
+      where: incomingWhere,
       include: {
         parent: {
-          select: { id: true, name: true, email: true, phone: true, avatar: true, city: true }
+          select: { id: true, name: true, email: true, phone: true, avatar: true, city: true, role: true }
+        },
+        member: {
+          select: { id: true, name: true, email: true, phone: true, avatar: true, city: true, role: true }
         },
         permissions: true
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    // Outgoing invitations where current user is parentId
     const outgoing = await prisma.familyRelationship.findMany({
-      where: { parentId: userId, status: 'PENDING' },
+      where: outgoingWhere,
       include: {
+        parent: {
+          select: { id: true, name: true, email: true, phone: true, avatar: true, city: true, role: true }
+        },
         member: {
-          select: { id: true, name: true, email: true, phone: true, avatar: true, city: true }
+          select: { id: true, name: true, email: true, phone: true, avatar: true, city: true, role: true }
         },
         permissions: true
       },
@@ -237,7 +287,7 @@ export const getFamilyInvitations = async (req: Request | any, res: Response): P
 
 /**
  * POST /api/family/invitations/:id/accept
- * Family member accepts a pending family invitation.
+ * Recipient accepts a pending family invitation / request.
  */
 export const acceptFamilyInvitation = async (req: Request | any, res: Response): Promise<void> => {
   try {
@@ -251,7 +301,7 @@ export const acceptFamilyInvitation = async (req: Request | any, res: Response):
 
     const relationship = await prisma.familyRelationship.findUnique({
       where: { id },
-      include: { parent: true }
+      include: { parent: true, member: true }
     });
 
     if (!relationship) {
@@ -259,8 +309,8 @@ export const acceptFamilyInvitation = async (req: Request | any, res: Response):
       return;
     }
 
-    // IDOR Security check: Only the designated member can accept
-    if (relationship.memberId !== userId) {
+    // IDOR Security check: Only designated participant (memberId or parentId) can accept
+    if (relationship.memberId !== userId && relationship.parentId !== userId) {
       res.status(403).json({ success: false, message: 'Not authorized to accept this invitation' });
       return;
     }
@@ -276,34 +326,60 @@ export const acceptFamilyInvitation = async (req: Request | any, res: Response):
       include: { permissions: true }
     });
 
-    // Ensure permissions exist with default false values
+    // Ensure permissions exist with default ACTIVE values upon acceptance
     await prisma.familyPermissions.upsert({
       where: { relationshipId: id },
-      update: {},
+      update: {
+        shareActivities: true,
+        shareLiveLocation: true,
+        isLocationSharingActive: true
+      },
       create: {
         relationshipId: id,
-        shareActivities: false,
-        shareLiveLocation: false,
-        isLocationSharingActive: false
+        shareActivities: true,
+        shareLiveLocation: true,
+        isLocationSharingActive: true
       }
     });
 
-    // Create notification for parent
+    // Also sync peer Connection table records to ACCEPTED
+    const existingConn = await prisma.connection.findFirst({
+      where: {
+        OR: [
+          { userId: relationship.parentId, connectedId: relationship.memberId },
+          { userId: relationship.memberId, connectedId: relationship.parentId }
+        ]
+      }
+    });
+    if (existingConn) {
+      await prisma.connection.update({
+        where: { id: existingConn.id },
+        data: { status: 'ACCEPTED' }
+      });
+    } else {
+      await prisma.connection.create({
+        data: { userId: relationship.parentId, connectedId: relationship.memberId, status: 'ACCEPTED' }
+      });
+    }
+
+    // Notify the other party
+    const targetUserId = relationship.parentId === userId ? relationship.memberId : relationship.parentId;
     try {
       await prisma.notification.create({
         data: {
-          userId: relationship.parentId,
+          userId: targetUserId,
           type: 'FAMILY_INVITATION_ACCEPTED',
-          title: 'Family Invitation Accepted',
-          message: `${req.user.name} accepted your family invitation.`,
-          relatedUserId: userId
+          title: 'Family Connection Accepted',
+          message: `${req.user.name} accepted your family connection request.`,
+          relatedUserId: userId,
+          relatedConnectionId: id
         }
       });
     } catch (notifErr) {
       console.error('Failed to send accept notification:', notifErr);
     }
 
-    res.json({ success: true, message: 'Family invitation accepted successfully', relationship: updated });
+    res.json({ success: true, message: 'Family connection request accepted successfully', relationship: updated });
   } catch (error: any) {
     console.error('Accept family invitation error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -312,7 +388,7 @@ export const acceptFamilyInvitation = async (req: Request | any, res: Response):
 
 /**
  * POST /api/family/invitations/:id/reject
- * Family member rejects a pending family invitation.
+ * Reject a pending family invitation / request.
  */
 export const rejectFamilyInvitation = async (req: Request | any, res: Response): Promise<void> => {
   try {
@@ -331,8 +407,8 @@ export const rejectFamilyInvitation = async (req: Request | any, res: Response):
       return;
     }
 
-    // IDOR Security check: Only the designated member can reject
-    if (relationship.memberId !== userId) {
+    // IDOR Security check: Only participant can reject
+    if (relationship.memberId !== userId && relationship.parentId !== userId) {
       res.status(403).json({ success: false, message: 'Not authorized to reject this invitation' });
       return;
     }
