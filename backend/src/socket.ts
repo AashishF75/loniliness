@@ -1,7 +1,7 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { prisma } from './index';
+import { prisma } from './db';
 import { canViewParentLocation, canParentShareLocation } from './controllers/family.controller';
 
 export interface AuthenticatedSocket extends Socket {
@@ -128,6 +128,27 @@ export function initializeSocket(server: HttpServer): Server {
 
         socket.join(`location:${parentId}`);
         socket.emit('location:joined', { room: `location:${parentId}` });
+
+        // Hydrate with last known location if available in database
+        try {
+          const parentUser = await prisma.user.findUnique({
+            where: { id: parentId },
+            select: { latitude: true, longitude: true, updatedAt: true }
+          });
+          if (parentUser && parentUser.latitude !== null && parentUser.longitude !== null) {
+            socket.emit('parent:location:update', {
+              parentId,
+              latitude: parentUser.latitude,
+              longitude: parentUser.longitude,
+              accuracy: 15,
+              timestamp: parentUser.updatedAt ? new Date(parentUser.updatedAt).getTime() : Date.now(),
+              serverTimestamp: Date.now()
+            });
+          }
+        } catch (hErr) {
+          console.warn('Location hydration error:', hErr);
+        }
+
         if (callback) callback({ success: true, message: `Joined location room for ${parentId}` });
         return;
       } else if (user.role === 'FAMILY') {
@@ -142,6 +163,27 @@ export function initializeSocket(server: HttpServer): Server {
 
         socket.join(`location:${parentId}`);
         socket.emit('location:joined', { room: `location:${parentId}` });
+
+        // Hydrate Family Member with last known location if available in database
+        try {
+          const parentUser = await prisma.user.findUnique({
+            where: { id: parentId },
+            select: { latitude: true, longitude: true, updatedAt: true }
+          });
+          if (parentUser && parentUser.latitude !== null && parentUser.longitude !== null) {
+            socket.emit('parent:location:update', {
+              parentId,
+              latitude: parentUser.latitude,
+              longitude: parentUser.longitude,
+              accuracy: 15,
+              timestamp: parentUser.updatedAt ? new Date(parentUser.updatedAt).getTime() : Date.now(),
+              serverTimestamp: Date.now()
+            });
+          }
+        } catch (hErr) {
+          console.warn('Location hydration error:', hErr);
+        }
+
         if (callback) callback({ success: true, message: `Joined location room for ${parentId}` });
         return;
       } else {
@@ -152,12 +194,31 @@ export function initializeSocket(server: HttpServer): Server {
       }
     };
 
+function isValidCoordinate(data: any): boolean {
+  if (!data || typeof data !== 'object') return false;
+  const { latitude, longitude, accuracy, timestamp } = data;
+
+  if (typeof latitude !== 'number' || isNaN(latitude) || latitude < -90 || latitude > 90) {
+    return false;
+  }
+  if (typeof longitude !== 'number' || isNaN(longitude) || longitude < -180 || longitude > 180) {
+    return false;
+  }
+  if (accuracy !== undefined && accuracy !== null && (typeof accuracy !== 'number' || isNaN(accuracy) || accuracy < 0)) {
+    return false;
+  }
+  if (timestamp !== undefined && timestamp !== null && (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0)) {
+    return false;
+  }
+  return true;
+}
+
     // Support multiple alias event names for joining location room
     socket.on('join:location', handleJoinLocation);
     socket.on('location:subscribe', handleJoinLocation);
     socket.on('join_room', handleJoinLocation);
 
-    // Handle parent location update authorization test event
+    // Handle parent location update event
     socket.on(
       'parent:location:update',
       async (
@@ -174,6 +235,7 @@ export function initializeSocket(server: HttpServer): Server {
         // Derive parentId directly from JWT authenticated user (NEVER trust client-supplied parentId)
         const parentId = user.id;
 
+        // Check if parent location sharing is enabled & active in DB
         const canShare = await canParentShareLocation(parentId);
         if (!canShare) {
           const errorMsg = 'Forbidden: Location sharing is disabled or inactive';
@@ -182,11 +244,67 @@ export function initializeSocket(server: HttpServer): Server {
           return;
         }
 
-        // DO NOT store latitude/longitude or broadcast real GPS coordinates yet in Phase 3A
+        // If coordinates are provided in data, perform validation & recipient broadcasting
+        if (data && (data.latitude !== undefined || data.longitude !== undefined)) {
+          if (!isValidCoordinate(data)) {
+            const errorMsg = 'Invalid request: Malformed location coordinates';
+            socket.emit('location:error', { error: errorMsg });
+            if (callback) callback({ success: false, error: errorMsg });
+            return;
+          }
+
+          // Persist Senior location in DB
+          try {
+            await prisma.user.update({
+              where: { id: parentId },
+              data: {
+                latitude: data.latitude,
+                longitude: data.longitude,
+                updatedAt: new Date()
+              }
+            });
+          } catch (dbErr) {
+            console.warn('Failed to update parent user location in DB:', dbErr);
+          }
+
+          // Build in-memory payload for authorized stream
+          const locationPayload = {
+            parentId,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            accuracy: data.accuracy ?? null,
+            speed: data.speed ?? null,
+            heading: data.heading ?? null,
+            timestamp: data.timestamp || Date.now(),
+            serverTimestamp: Date.now()
+          };
+
+          // Authoritative delivery: Fetch all connected sockets in location:<parentId> room
+          const roomName = `location:${parentId}`;
+          const sockets = await io.in(roomName).fetchSockets();
+
+          for (const recipientSocket of sockets) {
+            const recipientUser = recipientSocket.data?.user;
+            if (!recipientUser) continue;
+
+            if (recipientUser.id === parentId) {
+              recipientSocket.emit('parent:location:update', locationPayload);
+            } else if (recipientUser.role === 'FAMILY') {
+              const authorized = await canViewParentLocation(parentId, recipientUser.id);
+              if (authorized) {
+                recipientSocket.emit('parent:location:update', locationPayload);
+              } else {
+                recipientSocket.leave(roomName);
+                recipientSocket.emit('location:error', { error: 'Forbidden: Location permission revoked' });
+              }
+            }
+          }
+        }
+
         if (callback) {
           callback({
             success: true,
-            message: 'Parent location authorization verified. GPS transmission ready for Phase 3.'
+            message: 'Parent location update processed successfully'
           });
         }
       }

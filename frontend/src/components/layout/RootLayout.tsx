@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Heart, User, Bell, Check, CheckCircle2, MessageCircle, Users, Home, Calendar, Link2, XCircle, Shield } from 'lucide-react';
 import { notificationService } from '../../services/notificationService';
 import { connectionService } from '../../services/connectionService';
+import { familyService } from '../../services/familyService';
 import { useTranslation } from 'react-i18next';
 
 export function RootLayout() {
@@ -60,7 +61,13 @@ export function RootLayout() {
   const handleAcceptConnection = async (notif: any, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (notif.relatedConnectionId) {
+    if (notif.type === 'FAMILY_INVITATION' && notif.relatedConnectionId) {
+      await familyService.acceptInvitation(notif.relatedConnectionId);
+      window.dispatchEvent(new Event('connections_updated'));
+      await notificationService.markAsRead(notif.id);
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true, type: 'FAMILY_INVITATION_ACCEPTED', message: t('layout.acceptedRequest') } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } else if (notif.relatedConnectionId) {
       await connectionService.updateConnectionStatus(notif.relatedConnectionId, 'ACCEPTED');
       window.dispatchEvent(new Event('connections_updated'));
       await notificationService.markAsRead(notif.id);
@@ -72,7 +79,13 @@ export function RootLayout() {
   const handleRejectConnection = async (notif: any, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (notif.relatedConnectionId) {
+    if (notif.type === 'FAMILY_INVITATION' && notif.relatedConnectionId) {
+      await familyService.rejectInvitation(notif.relatedConnectionId);
+      window.dispatchEvent(new Event('connections_updated'));
+      await notificationService.markAsRead(notif.id);
+      setNotifications(prev => prev.filter(n => n.id !== notif.id));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } else if (notif.relatedConnectionId) {
       await connectionService.updateConnectionStatus(notif.relatedConnectionId, 'REJECTED');
       window.dispatchEvent(new Event('connections_updated'));
       await notificationService.markAsRead(notif.id);
@@ -82,7 +95,7 @@ export function RootLayout() {
   };
 
   const handleNotificationClick = (notif: any) => {
-    if (!notif.isRead && notif.type !== 'NEW_CONNECTION_REQUEST') {
+    if (!notif.isRead && notif.type !== 'NEW_CONNECTION_REQUEST' && notif.type !== 'FAMILY_INVITATION') {
       handleMarkAsRead(notif.id, { preventDefault: () => {}, stopPropagation: () => {} } as any);
     }
 
@@ -191,14 +204,14 @@ export function RootLayout() {
                               <span className="text-xs text-gray-500 block mt-2 font-medium">
                                 {new Date(notif.createdAt).toLocaleDateString()} {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
-                              {(notif.type === 'NEW_CONNECTION_REQUEST' && notif.connectionStatus === 'PENDING') && (
+                              {((notif.type === 'NEW_CONNECTION_REQUEST' || notif.type === 'FAMILY_INVITATION') && notif.connectionStatus !== 'ACCEPTED') && (
                                 <div className="flex gap-2 mt-3">
                                   <button onClick={(e) => handleAcceptConnection(notif, e)} className="px-4 py-1.5 bg-brand-600 text-white rounded-lg font-bold text-sm hover:bg-brand-700 transition-colors">{t('layout.accept')}</button>
                                   <button onClick={(e) => handleRejectConnection(notif, e)} className="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-300 transition-colors">{t('layout.reject')}</button>
                                 </div>
                               )}
                             </div>
-                            {!notif.isRead && notif.type !== 'NEW_CONNECTION_REQUEST' && (
+                            {!notif.isRead && notif.type !== 'NEW_CONNECTION_REQUEST' && notif.type !== 'FAMILY_INVITATION' && (
                               <button
                                 onClick={(e) => handleMarkAsRead(notif.id, e)}
                                 className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/50 text-gray-500 hover:text-brand-600"

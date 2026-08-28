@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../db';
 
 export const sendConnectionRequest = async (req: Request | any, res: Response): Promise<void> => {
   try {
@@ -59,8 +59,28 @@ export const sendConnectionRequest = async (req: Request | any, res: Response): 
       }
     });
 
+    // Dual Sync: If connecting a SENIOR and a FAMILY user, sync FamilyRelationship table
     const senderUser = await prisma.user.findUnique({ where: { id: senderId } });
-    if (senderUser) {
+    if (senderUser && targetUser) {
+      if ((senderUser.role === 'SENIOR' && targetUser.role === 'FAMILY') || (senderUser.role === 'FAMILY' && targetUser.role === 'SENIOR')) {
+        const parentId = senderUser.role === 'SENIOR' ? senderUser.id : targetUser.id;
+        const memberId = senderUser.role === 'FAMILY' ? senderUser.id : targetUser.id;
+
+        const rel = await prisma.familyRelationship.upsert({
+          where: {
+            parentId_memberId: { parentId, memberId }
+          },
+          update: { status: 'PENDING' },
+          create: { parentId, memberId, status: 'PENDING' }
+        });
+
+        await prisma.familyPermissions.upsert({
+          where: { relationshipId: rel.id },
+          update: { shareActivities: true, shareLiveLocation: true, isLocationSharingActive: true },
+          create: { relationshipId: rel.id, shareActivities: true, shareLiveLocation: true, isLocationSharingActive: true }
+        });
+      }
+
       await prisma.notification.create({
         data: {
           userId: targetUserId,
@@ -145,11 +165,51 @@ export const updateConnectionStatus = async (req: Request | any, res: Response):
 
     if (status === 'REJECTED') {
       await prisma.connection.delete({ where: { id } });
+      // Sync FamilyRelationship if exists
+      const rel = await prisma.familyRelationship.findFirst({
+        where: {
+          OR: [
+            { parentId: connection.userId, memberId: connection.connectedId },
+            { parentId: connection.connectedId, memberId: connection.userId }
+          ]
+        }
+      });
+      if (rel) {
+        await prisma.familyRelationship.update({
+          where: { id: rel.id },
+          data: { status: 'REJECTED' }
+        });
+      }
     } else {
       await prisma.connection.update({
         where: { id },
         data: { status }
       });
+
+      // Dual Sync: Sync matching FamilyRelationship to ACCEPTED
+      const userA = await prisma.user.findUnique({ where: { id: connection.userId } });
+      const userB = await prisma.user.findUnique({ where: { id: connection.connectedId } });
+
+      if (userA && userB) {
+        if ((userA.role === 'SENIOR' && userB.role === 'FAMILY') || (userA.role === 'FAMILY' && userB.role === 'SENIOR')) {
+          const parentId = userA.role === 'SENIOR' ? userA.id : userB.id;
+          const memberId = userA.role === 'FAMILY' ? userA.id : userB.id;
+
+          const rel = await prisma.familyRelationship.upsert({
+            where: {
+              parentId_memberId: { parentId, memberId }
+            },
+            update: { status: 'ACCEPTED' },
+            create: { parentId, memberId, status: 'ACCEPTED' }
+          });
+
+          await prisma.familyPermissions.upsert({
+            where: { relationshipId: rel.id },
+            update: { shareActivities: true, shareLiveLocation: true, isLocationSharingActive: true },
+            create: { relationshipId: rel.id, shareActivities: true, shareLiveLocation: true, isLocationSharingActive: true }
+          });
+        }
+      }
 
       if (status === 'ACCEPTED') {
         const receiverUser = await prisma.user.findUnique({ where: { id: userId } });
