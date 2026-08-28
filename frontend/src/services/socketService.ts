@@ -64,13 +64,13 @@ class SocketService {
     });
   }
 
-  sendParentLocationUpdate(): Promise<{ success: boolean; message?: string; error?: string }> {
+  sendParentLocationUpdate(locationData?: any): Promise<{ success: boolean; message?: string; error?: string }> {
     return new Promise((resolve) => {
       if (!this.socket || !this.socket.connected) {
         return resolve({ success: false, error: 'Socket not connected' });
       }
 
-      this.socket.emit('parent:location:update', {}, (response: any) => {
+      this.socket.emit('parent:location:update', locationData || {}, (response: any) => {
         if (response) {
           resolve(response);
         } else {
