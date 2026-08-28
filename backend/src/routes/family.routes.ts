@@ -9,7 +9,8 @@ import {
   getConnectedParents,
   removeFamilyMember,
   getFamilyPermissions,
-  updateFamilyPermissions
+  updateFamilyPermissions,
+  getFamilyMemberEvents
 } from '../controllers/family.controller';
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.get('/parents', protect, getConnectedParents);
 router.delete('/members/:relationshipId', protect, removeFamilyMember);
 router.get('/permissions/:relationshipId', protect, getFamilyPermissions);
 router.patch('/permissions/:relationshipId', protect, updateFamilyPermissions);
+router.get('/events/:targetUserId', protect, getFamilyMemberEvents);
 
 export default router;
