@@ -48,13 +48,35 @@ class SocketService {
     return this.socket;
   }
 
-  joinLocationRoom(parentId: string): Promise<{ success: boolean; message?: string; error?: string }> {
-    return new Promise((resolve) => {
-      if (!this.socket || !this.socket.connected) {
-        return resolve({ success: false, error: 'Socket not connected' });
-      }
+  async joinLocationRoom(parentId: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const socket = this.connect();
+    if (!socket.connected) {
+      await new Promise<void>((resolve) => {
+        if (socket.connected) return resolve();
+        const onConnect = () => {
+          socket.off('connect', onConnect);
+          resolve();
+        };
+        const onError = () => {
+          socket.off('connect_error', onError);
+          resolve();
+        };
+        socket.on('connect', onConnect);
+        socket.on('connect_error', onError);
+        setTimeout(() => {
+          socket.off('connect', onConnect);
+          socket.off('connect_error', onError);
+          resolve();
+        }, 5000);
+      });
+    }
 
-      this.socket.emit('join:location', { parentId }, (response: any) => {
+    if (!socket.connected) {
+      return { success: false, error: 'Socket not connected' };
+    }
+
+    return new Promise((resolve) => {
+      socket.emit('join:location', { parentId }, (response: any) => {
         if (response) {
           resolve(response);
         } else {
@@ -64,13 +86,35 @@ class SocketService {
     });
   }
 
-  sendParentLocationUpdate(locationData?: any): Promise<{ success: boolean; message?: string; error?: string }> {
-    return new Promise((resolve) => {
-      if (!this.socket || !this.socket.connected) {
-        return resolve({ success: false, error: 'Socket not connected' });
-      }
+  async sendParentLocationUpdate(locationData?: any): Promise<{ success: boolean; message?: string; error?: string }> {
+    const socket = this.connect();
+    if (!socket.connected) {
+      await new Promise<void>((resolve) => {
+        if (socket.connected) return resolve();
+        const onConnect = () => {
+          socket.off('connect', onConnect);
+          resolve();
+        };
+        const onError = () => {
+          socket.off('connect_error', onError);
+          resolve();
+        };
+        socket.on('connect', onConnect);
+        socket.on('connect_error', onError);
+        setTimeout(() => {
+          socket.off('connect', onConnect);
+          socket.off('connect_error', onError);
+          resolve();
+        }, 5000);
+      });
+    }
 
-      this.socket.emit('parent:location:update', locationData || {}, (response: any) => {
+    if (!socket.connected) {
+      return { success: false, error: 'Socket not connected' };
+    }
+
+    return new Promise((resolve) => {
+      socket.emit('parent:location:update', locationData || {}, (response: any) => {
         if (response) {
           resolve(response);
         } else {

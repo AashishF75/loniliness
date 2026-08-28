@@ -44,15 +44,25 @@ function FamilyEventsViewerModal({ targetUser, onClose }: { targetUser: FamilyMe
 
   useEffect(() => {
     fetchEvents();
-  }, [targetUser.id]);
+  }, [targetUser?.id]);
 
   const fetchEvents = async () => {
+    if (!targetUser?.id || targetUser.id === 'undefined') {
+      setError('Invalid user selected for viewing events');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       const res = await familyService.getMemberEvents(targetUser.id);
       if (res.success && res.events) {
-        setEventsData(res.events);
+        setEventsData({
+          upcoming: res.events.upcoming || [],
+          past: res.events.past || [],
+          organized: res.events.organized || []
+        });
       } else {
         setError(res.message || 'Failed to load events');
       }
