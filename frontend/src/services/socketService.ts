@@ -17,7 +17,10 @@ class SocketService {
       }
     }
 
-    if (this.socket?.connected && this.currentToken === authToken) {
+    if (this.socket && this.currentToken === authToken) {
+      if (!this.socket.connected && this.socket.disconnected) {
+        this.socket.connect();
+      }
       return this.socket;
     }
 

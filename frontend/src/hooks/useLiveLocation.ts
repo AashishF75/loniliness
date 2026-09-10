@@ -243,6 +243,15 @@ export function useLiveLocation({
         } else {
           // Standard Browser / Web execution
           try {
+            // Immediate position query to avoid waiting for initial watchPosition tick
+            if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+              navigator.geolocation.getCurrentPosition(
+                handlePosition,
+                () => {},
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 10000 }
+              );
+            }
+
             const watchId = await Geolocation.watchPosition(
               { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 },
               (position, err) => {

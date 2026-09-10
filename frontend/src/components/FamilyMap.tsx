@@ -101,14 +101,6 @@ export function FamilyMap({ parentId, parentName, isSharingActive, onClose }: Fa
     let isMounted = true;
     const socket = socketService.connect();
 
-    socketService.joinLocationRoom(parentId).then((res) => {
-      if (!isMounted) return;
-      if (!res.success) {
-        setErrorMessage(res.error || 'Failed to join location room');
-        setStatusState('offline');
-      }
-    });
-
     const handleIncomingLocation = (data: LocationData & { parentId?: string }) => {
       if (!isMounted) return;
       if (data.parentId && data.parentId !== parentId) return;
@@ -134,15 +126,30 @@ export function FamilyMap({ parentId, parentName, isSharingActive, onClose }: Fa
       setStatusState('offline');
     };
 
+    const joinRoom = () => {
+      socketService.joinLocationRoom(parentId).then((res) => {
+        if (!isMounted) return;
+        if (!res.success) {
+          setErrorMessage(res.error || 'Failed to join location room');
+          setStatusState('offline');
+        }
+      });
+    };
+
     socket.on('parent:location:update', handleIncomingLocation);
     socket.on('location:error', handleLocationError);
     socket.on('disconnect', handleDisconnect);
+    socket.on('connect', joinRoom);
+
+    // Initial join
+    joinRoom();
 
     return () => {
       isMounted = false;
       socket.off('parent:location:update', handleIncomingLocation);
       socket.off('location:error', handleLocationError);
       socket.off('disconnect', handleDisconnect);
+      socket.off('connect', joinRoom);
     };
   }, [parentId, isSharingActive]);
 

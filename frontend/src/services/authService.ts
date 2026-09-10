@@ -1,4 +1,5 @@
 import { fetchApi } from './api';
+import { socketService } from './socketService';
 
 export const authService = {
   async login(email: string, password: string) {
@@ -30,6 +31,7 @@ export const authService = {
   },
   
   logout() {
+    socketService.disconnect();
     localStorage.removeItem('saathi_auth_token');
     localStorage.removeItem('saathi_user');
   }

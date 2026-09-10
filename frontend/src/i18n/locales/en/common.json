@@ -180,6 +180,8 @@
     "parentSharingNotice": "Your live location is being shared with authorized family members.",
     "centerOnParent": "Center on Parent",
     "statusLive": "Live",
+    "statusUpdating": "Updating...",
+    "statusOutdated": "Location may be outdated",
     "statusOffline": "Offline / Outdated",
     "locationAccessOn": "Location Access: ON",
     "locationAccessOff": "Location Access: OFF",
