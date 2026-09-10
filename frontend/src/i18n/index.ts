@@ -38,4 +38,21 @@ i18n
     }
   });
 
+if (import.meta.hot) {
+  import.meta.hot.accept([
+    './locales/en/common.json',
+    './locales/hi/common.json',
+    './locales/te/common.json',
+    './locales/ml/common.json',
+    './locales/bho/common.json'
+  ], ([newEn, newHi, newTe, newMl, newBho]) => {
+    if (newEn) i18n.addResourceBundle('en', 'translation', (newEn as any).default || newEn, true, true);
+    if (newHi) i18n.addResourceBundle('hi', 'translation', (newHi as any).default || newHi, true, true);
+    if (newTe) i18n.addResourceBundle('te', 'translation', (newTe as any).default || newTe, true, true);
+    if (newMl) i18n.addResourceBundle('ml', 'translation', (newMl as any).default || newMl, true, true);
+    if (newBho) i18n.addResourceBundle('bho', 'translation', (newBho as any).default || newBho, true, true);
+    i18n.emit('loaded');
+  });
+}
+
 export default i18n;

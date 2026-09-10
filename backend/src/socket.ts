@@ -92,7 +92,7 @@ export function initializeSocket(server: HttpServer): Server {
     // Handle joining location room (e.g. location:<parentId>)
     const handleJoinLocation = async (
       data: any,
-      callback?: (response: { success: boolean; message?: string; error?: string }) => void
+      callback?: (response: { success: boolean; message?: string; error?: string; location?: any }) => void
     ) => {
       const parentId = typeof data === 'string' ? data : data?.parentId;
 
@@ -133,26 +133,28 @@ export function initializeSocket(server: HttpServer): Server {
         socket.emit('location:joined', { room: `location:${parentId}` });
 
         // Hydrate with last known location if available in database
+        let initialLocation: any = null;
         try {
           const parentUser = await prisma.user.findUnique({
             where: { id: parentId },
             select: { latitude: true, longitude: true, updatedAt: true }
           });
           if (parentUser && parentUser.latitude !== null && parentUser.longitude !== null) {
-            socket.emit('parent:location:update', {
+            initialLocation = {
               parentId,
               latitude: parentUser.latitude,
               longitude: parentUser.longitude,
               accuracy: 15,
               timestamp: parentUser.updatedAt ? new Date(parentUser.updatedAt).getTime() : Date.now(),
               serverTimestamp: Date.now()
-            });
+            };
+            socket.emit('parent:location:update', initialLocation);
           }
         } catch (hErr) {
           console.warn('Location hydration error:', hErr);
         }
 
-        if (callback) callback({ success: true, message: `Joined location room for ${parentId}` });
+        if (callback) callback({ success: true, message: `Joined location room for ${parentId}`, location: initialLocation });
         return;
       } else if (user.role === 'FAMILY') {
         // Prevent IDOR & unauthorized FAMILY access
@@ -168,26 +170,28 @@ export function initializeSocket(server: HttpServer): Server {
         socket.emit('location:joined', { room: `location:${parentId}` });
 
         // Hydrate Family Member with last known location if available in database
+        let initialLocation: any = null;
         try {
           const parentUser = await prisma.user.findUnique({
             where: { id: parentId },
             select: { latitude: true, longitude: true, updatedAt: true }
           });
           if (parentUser && parentUser.latitude !== null && parentUser.longitude !== null) {
-            socket.emit('parent:location:update', {
+            initialLocation = {
               parentId,
               latitude: parentUser.latitude,
               longitude: parentUser.longitude,
               accuracy: 15,
               timestamp: parentUser.updatedAt ? new Date(parentUser.updatedAt).getTime() : Date.now(),
               serverTimestamp: Date.now()
-            });
+            };
+            socket.emit('parent:location:update', initialLocation);
           }
         } catch (hErr) {
           console.warn('Location hydration error:', hErr);
         }
 
-        if (callback) callback({ success: true, message: `Joined location room for ${parentId}` });
+        if (callback) callback({ success: true, message: `Joined location room for ${parentId}`, location: initialLocation });
         return;
       } else {
         const errorMsg = 'Forbidden: Role not authorized for location rooms';

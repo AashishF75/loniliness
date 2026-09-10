@@ -127,10 +127,17 @@ export function FamilyMap({ parentId, parentName, isSharingActive, onClose }: Fa
     };
 
     const joinRoom = () => {
-      socketService.joinLocationRoom(parentId).then((res) => {
+      socketService.joinLocationRoom(parentId).then((res: any) => {
         if (!isMounted) return;
-        if (!res.success) {
-          setErrorMessage(res.error || 'Failed to join location room');
+        if (res?.location && isValidLocation(res.location.latitude, res.location.longitude)) {
+          setCurrentLocation(res.location);
+          setLastUpdated(Date.now());
+          setIsStale(false);
+          setStatusState('live');
+          setErrorMessage(null);
+        }
+        if (!res?.success) {
+          setErrorMessage(res?.error || 'Failed to join location room');
           setStatusState('offline');
         }
       });
@@ -173,7 +180,7 @@ export function FamilyMap({ parentId, parentName, isSharingActive, onClose }: Fa
     // If marker doesn't exist yet, create it
     if (!markerRef.current) {
       const marker = L.marker([targetLat, targetLng], { icon }).addTo(map);
-      marker.bindPopup(`<b>${parentName}</b><br/>${isStale ? t('family.statusOutdated') : t('family.statusLive')}`);
+      marker.bindPopup(`<b>${parentName}</b><br/>${isStale ? t('family.statusOutdated', 'Location may be outdated') : t('family.statusLive', 'Live')}`);
       markerRef.current = marker;
 
       // Accuracy Circle
@@ -284,9 +291,9 @@ export function FamilyMap({ parentId, parentName, isSharingActive, onClose }: Fa
                   statusState === 'outdated' ? 'outdated' : 'offline'
                 }
                 label={
-                  statusState === 'live' ? t('family.statusLive') :
-                  statusState === 'updating' ? t('family.statusUpdating') :
-                  statusState === 'outdated' ? t('family.statusOutdated') : t('family.statusOffline')
+                  statusState === 'live' ? t('family.statusLive', 'Live') :
+                  statusState === 'updating' ? t('family.statusUpdating', 'Updating...') :
+                  statusState === 'outdated' ? t('family.statusOutdated', 'Location may be outdated') : t('family.statusOffline', 'Offline / Outdated')
                 }
                 size="sm"
               />
@@ -306,7 +313,7 @@ export function FamilyMap({ parentId, parentName, isSharingActive, onClose }: Fa
               variant="outline"
               className="px-3 py-2 text-sm font-bold border-brand-200 text-brand-700 hover:bg-brand-50 rounded-xl flex items-center gap-1.5"
             >
-              <Navigation className="w-4 h-4" /> {t('family.centerOnParent')}
+              <Navigation className="w-4 h-4" /> {t('family.centerOnParent', 'Center on Parent')}
             </Button>
           )}
           {onClose && (
@@ -325,7 +332,7 @@ export function FamilyMap({ parentId, parentName, isSharingActive, onClose }: Fa
       {isStale && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-          <span>{t('family.statusOutdated')}</span>
+          <span>{t('family.statusOutdated', 'Location may be outdated')}</span>
         </div>
       )}
 
@@ -343,8 +350,8 @@ export function FamilyMap({ parentId, parentName, isSharingActive, onClose }: Fa
         {!currentLocation && (
           <div className="absolute inset-0 bg-gray-50/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 text-center">
             <Radio className="w-12 h-12 text-brand-600 animate-pulse mb-3" />
-            <p className="text-xl font-extrabold text-gray-900 mb-1">{t('family.locationUpdatingDesc')}</p>
-            <p className="text-sm text-gray-500">{t('family.statusUpdating')}</p>
+            <p className="text-xl font-extrabold text-gray-900 mb-1">{t('family.locationUpdatingDesc', 'Waiting for location stream...')}</p>
+            <p className="text-sm text-gray-500">{t('family.statusUpdating', 'Updating...')}</p>
           </div>
         )}
       </div>

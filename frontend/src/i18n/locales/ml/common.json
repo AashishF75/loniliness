@@ -141,6 +141,12 @@
     "openDiscussion": "ഇവന്റ് ചർച്ച തുറക്കുക"
   },
   "family": {
+    "title": "കുടുംബവും പരിചാരകരും",
+    "subtitle": "നിങ്ങളുടെ പ്രിയപ്പെട്ടവരുമായി ബന്ധപ്പെടുകയും സുരക്ഷിതമായി ലൊക്കേഷൻ പങ്കിടുകയും ചെയ്യുക",
+    "incomingInvitations": "വന്ന ക്ഷണങ്ങൾ",
+    "incomingInvitationsDesc": "കുടുംബാംഗങ്ങളിൽ നിന്നുള്ള തീർപ്പുകൽപ്പിക്കാത്ത അഭ്യർത്ഥനകൾ.",
+    "liveSharingGlobalOn": "ലൈവ് പങ്കിടൽ ഓൺ",
+    "liveSharingGlobalOff": "ലൈവ് പങ്കിടൽ ഓഫ്",
     "myFamily": "എന്റെ കുടുംബം",
     "addFamilyMember": "കുടുംബാംഗത്തെ ചേർക്കുക",
     "emergencyContacts": "അടിയന്തര കോൺടാക്റ്റുകൾ",

@@ -141,6 +141,12 @@
     "openDiscussion": "Open Event Discussion"
   },
   "family": {
+    "title": "Family & Caregivers",
+    "subtitle": "Stay connected and share location with your loved ones",
+    "incomingInvitations": "Incoming Invitations",
+    "incomingInvitationsDesc": "Pending requests to connect from family members.",
+    "liveSharingGlobalOn": "Live Sharing Active",
+    "liveSharingGlobalOff": "Live Sharing Inactive",
     "myFamily": "My Family",
     "addFamilyMember": "Add Family Member",
     "emergencyContacts": "Emergency Contacts",

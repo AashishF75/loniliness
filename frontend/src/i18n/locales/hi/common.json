@@ -141,6 +141,12 @@
     "openDiscussion": "आयोजन चर्चा खोलें"
   },
   "family": {
+    "title": "परिवार और देखभालकर्ता",
+    "subtitle": "अपने प्रियजनों से जुड़े रहें और सुरक्षित रूप से लोकेशन साझा करें",
+    "incomingInvitations": "आने वाले आमंत्रण",
+    "incomingInvitationsDesc": "परिवार के सदस्यों से कनेक्ट करने के लंबित अनुरोध।",
+    "liveSharingGlobalOn": "लाइव शेयरिंग चालू",
+    "liveSharingGlobalOff": "लाइव शेयरिंग बंद",
     "myFamily": "मेरा परिवार",
     "addFamilyMember": "परिवार का सदस्य जोड़ें",
     "emergencyContacts": "आपातकालीन संपर्क",

@@ -573,10 +573,10 @@ export function Family() {
         <div>
           <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight flex items-center gap-3">
             <Heart className="w-9 h-9 text-brand-600 fill-brand-600" />
-            {t('family.title')}
+            {t('family.title', 'Family & Caregivers')}
           </h1>
           <p className="text-base sm:text-lg text-gray-600 font-medium mt-1">
-            {t('family.subtitle')}
+            {t('family.subtitle', 'Stay connected and share location with your loved ones')}
           </p>
         </div>
       </div>
@@ -587,11 +587,11 @@ export function Family() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <Clock className="w-6 h-6 text-amber-100" />
-              <h2 className="text-xl font-bold">{t('family.incomingInvitations')}</h2>
+              <h2 className="text-xl font-bold">{t('family.incomingInvitations', 'Incoming Invitations')}</h2>
               <Badge variant="amber">{incomingInvites.length}</Badge>
             </div>
             <p className="text-amber-100 text-sm font-medium">
-              {t('family.incomingInvitationsDesc')}
+              {t('family.incomingInvitationsDesc', 'Pending requests to connect from family members.')}
             </p>
 
             <div className="flex flex-col gap-3 mt-1">
@@ -649,7 +649,7 @@ export function Family() {
             <div className="shrink-0 flex items-center gap-4">
               <StatusPill
                 status={isSeniorSharingLiveLocation ? 'live' : 'offline'}
-                label={isSeniorSharingLiveLocation ? t('family.liveSharingGlobalOn') : t('family.liveSharingGlobalOff')}
+                label={isSeniorSharingLiveLocation ? t('family.liveSharingGlobalOn', 'Live Sharing Active') : t('family.liveSharingGlobalOff', 'Live Sharing Inactive')}
                 size="lg"
                 className="bg-white/10 text-white border-white/20"
               />

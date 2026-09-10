@@ -141,6 +141,12 @@
     "openDiscussion": "ఈవెంట్ చర్చను తెరవండి"
   },
   "family": {
+    "title": "కుటుంబం మరియు సంరక్షకులు",
+    "subtitle": "మీ ప్రియమైన వారితో కనెక్ట్ అయి ఉండండి మరియు సురక్షితంగా లోకేషన్ పంచుకోండి",
+    "incomingInvitations": "వచ్చిన ఆహ్వానాలు",
+    "incomingInvitationsDesc": "కుటుంబ సభ్యుల నుండి వచ్చిన పెండింగ్ అభ్యర్థనలు.",
+    "liveSharingGlobalOn": "లైవ్ షేరింగ్ ఆన్",
+    "liveSharingGlobalOff": "లైవ్ షేరింగ్ ఆఫ్",
     "myFamily": "నా కుటుంబం",
     "addFamilyMember": "కుటుంబ సభ్యుని జోడించండి",
     "emergencyContacts": "అత్యవసర పరిచయాలు",
