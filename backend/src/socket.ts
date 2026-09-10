@@ -14,6 +14,8 @@ export interface AuthenticatedSocket extends Socket {
   };
 }
 
+let activeIo: Server | null = null;
+
 export function initializeSocket(server: HttpServer): Server {
   const io = new Server(server, {
     cors: {
@@ -21,6 +23,7 @@ export function initializeSocket(server: HttpServer): Server {
       methods: ['GET', 'POST']
     }
   });
+  activeIo = io;
 
   // JWT Authentication Middleware for Socket.IO
   io.use(async (socket: AuthenticatedSocket, next) => {
@@ -312,4 +315,25 @@ function isValidCoordinate(data: any): boolean {
   });
 
   return io;
+}
+
+export async function evictUnauthorizedSockets(parentId: string): Promise<void> {
+  if (!activeIo) return;
+  try {
+    const roomName = `location:${parentId}`;
+    const sockets = await activeIo.in(roomName).fetchSockets();
+    for (const recipientSocket of sockets) {
+      const recipientUser = (recipientSocket as any).data?.user;
+      if (!recipientUser) continue;
+      if (recipientUser.role === 'FAMILY') {
+        const authorized = await canViewParentLocation(parentId, recipientUser.id);
+        if (!authorized) {
+          recipientSocket.leave(roomName);
+          recipientSocket.emit('location:error', { error: 'Forbidden: Location permission revoked' });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Error evicting unauthorized sockets:', err);
+  }
 }

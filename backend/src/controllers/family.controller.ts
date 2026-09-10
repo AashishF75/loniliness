@@ -35,7 +35,8 @@ export const canViewParentLocation = async (parentId: string, memberId: string):
     if (!rel || rel.status !== 'ACCEPTED') return false;
     return (
       rel.permissions?.shareLiveLocation === true &&
-      rel.permissions?.isLocationSharingActive === true
+      rel.permissions?.isLocationSharingActive === true &&
+      rel.permissions?.locationAccess !== false
     );
   } catch (error) {
     return false;
@@ -162,13 +163,15 @@ export const sendFamilyInvitation = async (req: Request | any, res: Response): P
       update: {
         shareActivities: true,
         shareLiveLocation: true,
-        isLocationSharingActive: true
+        isLocationSharingActive: true,
+        locationAccess: true
       },
       create: {
         relationshipId: relationship.id,
         shareActivities: true,
         shareLiveLocation: true,
-        isLocationSharingActive: true
+        isLocationSharingActive: true,
+        locationAccess: true
       }
     });
 
@@ -332,13 +335,15 @@ export const acceptFamilyInvitation = async (req: Request | any, res: Response):
       update: {
         shareActivities: true,
         shareLiveLocation: true,
-        isLocationSharingActive: true
+        isLocationSharingActive: true,
+        locationAccess: true
       },
       create: {
         relationshipId: id,
         shareActivities: true,
         shareLiveLocation: true,
-        isLocationSharingActive: true
+        isLocationSharingActive: true,
+        locationAccess: true
       }
     });
 
@@ -592,7 +597,7 @@ export const getFamilyPermissions = async (req: Request | any, res: Response): P
 
 /**
  * PATCH /api/family/permissions/:relationshipId
- * Update relationship-specific permissions (Parent ONLY).
+ * Update relationship-specific permissions (Parent or Family Member according to role).
  */
 export const updateFamilyPermissions = async (req: Request | any, res: Response): Promise<void> => {
   try {
@@ -614,9 +619,12 @@ export const updateFamilyPermissions = async (req: Request | any, res: Response)
       return;
     }
 
-    // IDOR & Role Security check: ONLY the parent can update permissions
-    if (relationship.parentId !== userId) {
-      res.status(403).json({ success: false, message: 'Only the parent can modify family permissions' });
+    // IDOR Security check: Requester must be either parent or member
+    const isParent = relationship.parentId === userId;
+    const isMember = relationship.memberId === userId;
+
+    if (!isParent && !isMember) {
+      res.status(403).json({ success: false, message: 'Not authorized to modify permissions for this relationship' });
       return;
     }
 
@@ -625,37 +633,75 @@ export const updateFamilyPermissions = async (req: Request | any, res: Response)
       return;
     }
 
-    let { shareActivities, shareLiveLocation, isLocationSharingActive } = req.body;
-
     const currentPerms = relationship.permissions || {
       shareActivities: false,
       shareLiveLocation: false,
-      isLocationSharingActive: false
+      isLocationSharingActive: false,
+      locationAccess: true
     };
 
-    const newShareActivities = shareActivities !== undefined ? Boolean(shareActivities) : currentPerms.shareActivities;
-    let newShareLiveLocation = shareLiveLocation !== undefined ? Boolean(shareLiveLocation) : currentPerms.shareLiveLocation;
-    let newIsLocationSharingActive = isLocationSharingActive !== undefined ? Boolean(isLocationSharingActive) : currentPerms.isLocationSharingActive;
+    let updatedPermissions;
 
-    // CRUCIAL RULE: If shareLiveLocation is false, isLocationSharingActive MUST be forced to false!
-    if (!newShareLiveLocation) {
-      newIsLocationSharingActive = false;
+    if (isParent) {
+      // SENIOR updates their sharing preferences
+      let { shareActivities, shareLiveLocation, isLocationSharingActive } = req.body;
+
+      const newShareActivities = shareActivities !== undefined ? Boolean(shareActivities) : currentPerms.shareActivities;
+      let newShareLiveLocation = shareLiveLocation !== undefined ? Boolean(shareLiveLocation) : currentPerms.shareLiveLocation;
+      let newIsLocationSharingActive = isLocationSharingActive !== undefined ? Boolean(isLocationSharingActive) : currentPerms.isLocationSharingActive;
+
+      // CRUCIAL RULE: If shareLiveLocation is false, isLocationSharingActive MUST be forced to false!
+      if (!newShareLiveLocation) {
+        newIsLocationSharingActive = false;
+      }
+
+      updatedPermissions = await prisma.familyPermissions.upsert({
+        where: { relationshipId },
+        update: {
+          shareActivities: newShareActivities,
+          shareLiveLocation: newShareLiveLocation,
+          isLocationSharingActive: newIsLocationSharingActive
+        },
+        create: {
+          relationshipId,
+          shareActivities: newShareActivities,
+          shareLiveLocation: newShareLiveLocation,
+          isLocationSharingActive: newIsLocationSharingActive,
+          locationAccess: currentPerms.locationAccess ?? true
+        }
+      });
+    } else {
+      // FAMILY MEMBER updates their location access authorization
+      const { locationAccess } = req.body;
+      if (locationAccess === undefined) {
+        res.status(400).json({ success: false, message: 'locationAccess is required' });
+        return;
+      }
+
+      const newLocationAccess = Boolean(locationAccess);
+
+      updatedPermissions = await prisma.familyPermissions.upsert({
+        where: { relationshipId },
+        update: {
+          locationAccess: newLocationAccess
+        },
+        create: {
+          relationshipId,
+          shareActivities: currentPerms.shareActivities,
+          shareLiveLocation: currentPerms.shareLiveLocation,
+          isLocationSharingActive: currentPerms.isLocationSharingActive,
+          locationAccess: newLocationAccess
+        }
+      });
     }
 
-    const updatedPermissions = await prisma.familyPermissions.upsert({
-      where: { relationshipId },
-      update: {
-        shareActivities: newShareActivities,
-        shareLiveLocation: newShareLiveLocation,
-        isLocationSharingActive: newIsLocationSharingActive
-      },
-      create: {
-        relationshipId,
-        shareActivities: newShareActivities,
-        shareLiveLocation: newShareLiveLocation,
-        isLocationSharingActive: newIsLocationSharingActive
-      }
-    });
+    // Evict sockets in real-time if permissions were revoked
+    try {
+      const { evictUnauthorizedSockets } = await import('../socket');
+      await evictUnauthorizedSockets(relationship.parentId);
+    } catch (evictErr) {
+      console.warn('Socket eviction check warning:', evictErr);
+    }
 
     res.json({
       success: true,

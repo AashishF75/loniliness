@@ -295,6 +295,7 @@ model FamilyPermissions {
   shareActivities         Boolean            @default(false)
   shareLiveLocation       Boolean            @default(false)
   isLocationSharingActive Boolean            @default(false)
+  locationAccess          Boolean            @default(true)
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
 }

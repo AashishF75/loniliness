@@ -30,6 +30,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { familyService, type FamilyRelationship, type FamilyMemberUser } from '../services/familyService';
 import { userService } from '../services/userService';
 import { FamilyMap } from '../components/FamilyMap';
+import { useLiveLocation } from '../hooks/useLiveLocation';
 
 function FamilyEventsViewerModal({ targetUser, onClose }: { targetUser: FamilyMemberUser; onClose: () => void }) {
   const { t } = useTranslation();
@@ -201,17 +202,36 @@ function FamilyEventsViewerModal({ targetUser, onClose }: { targetUser: FamilyMe
   );
 }
 
-function ParentLocationViewer({ rel, onOpenEvents }: { rel: FamilyRelationship; onOpenEvents?: (user: FamilyMemberUser) => void }) {
+function ParentLocationViewer({
+  rel,
+  onOpenEvents,
+  onToggleLocationAccess,
+  isUpdatingAccess
+}: {
+  rel: FamilyRelationship;
+  onOpenEvents?: (user: FamilyMemberUser) => void;
+  onToggleLocationAccess: (relationshipId: string, currentAccess: boolean) => Promise<void>;
+  isUpdatingAccess: boolean;
+}) {
   const { t } = useTranslation();
   const [showMap, setShowMap] = useState(false);
 
   const perms = rel.permissions || {
     shareActivities: false,
     shareLiveLocation: false,
-    isLocationSharingActive: false
+    isLocationSharingActive: false,
+    locationAccess: true
   };
 
-  const isAuthorized = perms.shareLiveLocation && perms.isLocationSharingActive;
+  const hasLocationAccess = perms.locationAccess !== false;
+  const isSeniorSharing = perms.shareLiveLocation && perms.isLocationSharingActive;
+  const canViewLocation = hasLocationAccess && isSeniorSharing;
+
+  useEffect(() => {
+    if (!hasLocationAccess) {
+      setShowMap(false);
+    }
+  }, [hasLocationAccess]);
 
   return (
     <Card className="p-5 sm:p-7 flex flex-col gap-6 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -228,9 +248,10 @@ function ParentLocationViewer({ rel, onOpenEvents }: { rel: FamilyRelationship; 
           </div>
         </div>
 
+        {/* Location Access Indicator */}
         <StatusPill
-          status={isAuthorized ? 'live' : 'offline'}
-          label={isAuthorized ? t('family.liveLocationOn') : t('family.liveLocationOff')}
+          status={hasLocationAccess ? (isSeniorSharing ? 'live' : 'active') : 'disabled'}
+          label={hasLocationAccess ? (t('family.locationAccessOn') || 'Location Access: ON') : (t('family.locationAccessOff') || 'Location Access: OFF')}
           size="md"
         />
       </div>
@@ -255,41 +276,79 @@ function ParentLocationViewer({ rel, onOpenEvents }: { rel: FamilyRelationship; 
             {t('family.shareLiveLocation')}
           </span>
           <StatusPill
-            status={perms.shareLiveLocation ? 'connected' : 'disabled'}
-            label={perms.shareLiveLocation ? 'ON' : 'OFF'}
+            status={isSeniorSharing ? 'connected' : 'disabled'}
+            label={isSeniorSharing ? 'ON' : 'OFF'}
             size="sm"
             showDot={false}
           />
         </div>
       </div>
 
-      {/* Action Buttons: Current Location & View Events */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Button
-          onClick={() => setShowMap(!showMap)}
-          variant={showMap ? 'outline' : 'primary'}
-          className={`py-3.5 text-base font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all ${
-            showMap ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'bg-brand-600 text-white hover:bg-brand-700 shadow-md'
-          }`}
-        >
-          {showMap ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          {showMap ? t('family.hideLiveLocation') : 'View Current Location'}
-        </Button>
+      {/* Action Buttons: Current Location / Disable / Enable Access */}
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {hasLocationAccess ? (
+            <>
+              <Button
+                onClick={() => setShowMap(!showMap)}
+                variant={showMap ? 'outline' : 'primary'}
+                className={`py-3.5 text-base font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all ${
+                  showMap ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'bg-brand-600 text-white hover:bg-brand-700 shadow-md'
+                }`}
+              >
+                {showMap ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showMap ? t('family.hideLiveLocation') : (t('family.viewCurrentLocation') || 'View Current Location')}
+              </Button>
 
-        <Button
-          onClick={() => rel.parent && onOpenEvents && onOpenEvents(rel.parent)}
-          variant="outline"
-          className="py-3.5 text-base font-extrabold rounded-2xl flex items-center justify-center gap-2 border-brand-300 text-brand-700 hover:bg-brand-50"
-        >
-          <Calendar className="w-5 h-5 text-brand-600" />
-          View Events
-        </Button>
+              <Button
+                onClick={() => onToggleLocationAccess(rel.id, true)}
+                disabled={isUpdatingAccess}
+                variant="outline"
+                className="py-3.5 text-base font-extrabold rounded-2xl flex items-center justify-center gap-2 border-red-200 text-red-600 hover:bg-red-50"
+              >
+                <EyeOff className="w-5 h-5 text-red-500" />
+                {t('family.disableAccess') || 'Disable Access'}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={() => onToggleLocationAccess(rel.id, false)}
+                disabled={isUpdatingAccess}
+                className="py-3.5 text-base font-extrabold rounded-2xl flex items-center justify-center gap-2 bg-brand-600 text-white hover:bg-brand-700 shadow-md"
+              >
+                <Eye className="w-5 h-5" />
+                {t('family.enableAccess') || 'Enable Access'}
+              </Button>
+
+              <div className="py-3.5 px-4 text-base font-extrabold rounded-2xl flex items-center justify-center gap-2 bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed select-none">
+                <AlertTriangle className="w-5 h-5 text-gray-400" />
+                {t('family.locationUnavailable') || 'Location Unavailable'}
+              </div>
+            </>
+          )}
+
+          <Button
+            onClick={() => rel.parent && onOpenEvents && onOpenEvents(rel.parent)}
+            variant="outline"
+            className="py-3.5 text-base font-extrabold rounded-2xl flex items-center justify-center gap-2 border-brand-300 text-brand-700 hover:bg-brand-50"
+          >
+            <Calendar className="w-5 h-5 text-brand-600" />
+            View Events
+          </Button>
+        </div>
+
+        {!hasLocationAccess && (
+          <p className="text-xs text-gray-500 font-medium px-1">
+            {t('family.familyLocationDisabledNotice') || 'You have disabled location access for this senior. Enable access to view live location.'}
+          </p>
+        )}
       </div>
 
       {/* Embedded Map or Location Unavailable Notice */}
       {showMap && (
         <div className="mt-1">
-          {isAuthorized ? (
+          {canViewLocation ? (
             <FamilyMap
               parentId={rel.parentId}
               parentName={rel.parent?.name || 'Parent Senior'}
@@ -301,7 +360,11 @@ function ParentLocationViewer({ rel, onOpenEvents }: { rel: FamilyRelationship; 
               <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
               <div>
                 <p className="font-extrabold text-amber-950 mb-1">{t('family.permissionDenied')}</p>
-                <p className="text-sm font-medium text-amber-800">{t('family.parentLocationUnavailable')}</p>
+                <p className="text-sm font-medium text-amber-800">
+                  {!hasLocationAccess
+                    ? (t('family.familyLocationDisabledNotice') || 'Location access is disabled by you. Click Enable Access above.')
+                    : t('family.parentLocationUnavailable')}
+                </p>
               </div>
             </div>
           )}
@@ -468,13 +531,40 @@ export function Family() {
     }
   };
 
+  const handleToggleFamilyLocationAccess = async (relationshipId: string, currentAccess: boolean) => {
+    setUpdatingPermId(relationshipId);
+    try {
+      const res = await familyService.updatePermissions(relationshipId, {
+        locationAccess: !currentAccess
+      });
+      if (res.success && (res.permissions || res.data)) {
+        const newPerms = res.permissions || res.data;
+        setParents((prev) =>
+          prev.map((p) => (p.id === relationshipId ? { ...p, permissions: newPerms } : p))
+        );
+      }
+    } catch (err) {
+      console.error('Error toggling location access:', err);
+    } finally {
+      setUpdatingPermId(null);
+    }
+  };
+
+  const isSeniorSharingLiveLocation = Boolean(
+    currentUser?.role === 'SENIOR' &&
+    members.some((m) => m.permissions?.shareLiveLocation && m.permissions?.isLocationSharingActive)
+  );
+
+  // Activate GPS watching hook for Senior when live location sharing is active
+  useLiveLocation({
+    isParent: currentUser?.role === 'SENIOR',
+    shareLiveLocation: isSeniorSharingLiveLocation,
+    isLocationSharingActive: isSeniorSharingLiveLocation
+  });
+
   if (loading) {
     return <LoadingState message={t('family.sending')} />;
   }
-
-  const isSeniorSharingLiveLocation = members.some(
-    (m) => m.permissions?.shareLiveLocation && m.permissions?.isLocationSharingActive
-  );
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-8 pb-12 animate-fade-in">
@@ -807,7 +897,13 @@ export function Family() {
           ) : (
             <div className="grid grid-cols-1 gap-6">
               {parents.map((rel) => (
-                <ParentLocationViewer key={rel.id} rel={rel} onOpenEvents={setViewingEventsUser} />
+                <ParentLocationViewer
+                  key={rel.id}
+                  rel={rel}
+                  onOpenEvents={setViewingEventsUser}
+                  onToggleLocationAccess={handleToggleFamilyLocationAccess}
+                  isUpdatingAccess={updatingPermId === rel.id}
+                />
               ))}
             </div>
           )}

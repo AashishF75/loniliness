@@ -6,6 +6,7 @@ export interface FamilyPermissions {
   shareActivities: boolean;
   shareLiveLocation: boolean;
   isLocationSharingActive: boolean;
+  locationAccess?: boolean;
 }
 
 export interface FamilyMemberUser {
@@ -79,11 +80,19 @@ export const familyService = {
     return await fetchApi(`/family/permissions/${relationshipId}`);
   },
 
-  // Update permissions for relationship (Parent ONLY)
-  async updatePermissions(relationshipId: string, perms: { shareActivities?: boolean; shareLiveLocation?: boolean; isLocationSharingActive?: boolean }) {
+  // Update permissions for relationship (Parent or Family Member)
+  async updatePermissions(relationshipId: string, perms: { shareActivities?: boolean; shareLiveLocation?: boolean; isLocationSharingActive?: boolean; locationAccess?: boolean }) {
     return await fetchApi(`/family/permissions/${relationshipId}`, {
       method: 'PATCH',
       body: JSON.stringify(perms)
+    });
+  },
+
+  // Toggle family location viewing access
+  async toggleLocationAccess(relationshipId: string, locationAccess: boolean) {
+    return await fetchApi(`/family/permissions/${relationshipId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ locationAccess })
     });
   },
 

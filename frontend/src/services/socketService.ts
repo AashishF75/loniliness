@@ -2,6 +2,7 @@ import { io, Socket } from 'socket.io-client';
 
 class SocketService {
   private socket: Socket | null = null;
+  private currentToken: string | null = null;
 
   connect(token?: string): Socket {
     const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('saathi_auth_token') : null);
@@ -16,14 +17,16 @@ class SocketService {
       }
     }
 
-    if (this.socket?.connected) {
+    if (this.socket?.connected && this.currentToken === authToken) {
       return this.socket;
     }
 
     if (this.socket) {
       this.socket.disconnect();
+      this.socket = null;
     }
 
+    this.currentToken = authToken;
     this.socket = io(backendUrl, {
       auth: {
         token: authToken
@@ -128,6 +131,7 @@ class SocketService {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
+      this.currentToken = null;
     }
   }
 
