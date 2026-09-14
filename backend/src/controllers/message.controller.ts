@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../db';
+import { isValidObjectId } from '../utils/validation';
 
 export const sendMessage = async (req: Request | any, res: Response): Promise<void> => {
   try {
     const senderId = req.user?.id;
     const { receiverId, content } = req.body;
 
-    if (!senderId || !receiverId) {
-      res.status(400).json({ success: false, message: 'Missing user IDs' });
+    if (!senderId || !receiverId || !isValidObjectId(receiverId)) {
+      res.status(400).json({ success: false, message: 'Invalid user IDs' });
       return;
     }
 
@@ -16,7 +17,7 @@ export const sendMessage = async (req: Request | any, res: Response): Promise<vo
       return;
     }
 
-    if (!content || content.trim() === '') {
+    if (!content || typeof content !== 'string' || content.trim() === '') {
       res.status(400).json({ success: false, message: 'Message cannot be empty' });
       return;
     }
@@ -56,6 +57,25 @@ export const sendMessage = async (req: Request | any, res: Response): Promise<vo
       return;
     }
 
+    const senderUser = await prisma.user.findUnique({ where: { id: senderId } });
+    const receiverUser = await prisma.user.findUnique({ where: { id: receiverId } });
+
+    if (!senderUser || !receiverUser) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    // Protection rule: Senior-to-Senior messaging requires the sender to be a verified Senior
+    if (senderUser.role === 'SENIOR' && receiverUser.role === 'SENIOR') {
+      if (senderUser.verificationStatus !== 'VERIFIED' || senderUser.verified !== true) {
+        res.status(403).json({
+          success: false,
+          message: 'Please verify your Senior Citizen identity before chatting with peers in the community.'
+        });
+        return;
+      }
+    }
+
     const message = await prisma.message.create({
       data: {
         senderId,
@@ -64,7 +84,6 @@ export const sendMessage = async (req: Request | any, res: Response): Promise<vo
       }
     });
 
-    const senderUser = await prisma.user.findUnique({ where: { id: senderId } });
     if (senderUser) {
       await prisma.notification.create({
         data: {
@@ -90,8 +109,8 @@ export const getConversation = async (req: Request | any, res: Response): Promis
     const currentUserId = req.user?.id;
     const otherUserId = req.params.userId;
 
-    if (!currentUserId || !otherUserId) {
-      res.status(400).json({ success: false, message: 'Missing user IDs' });
+    if (!currentUserId || !otherUserId || !isValidObjectId(otherUserId)) {
+      res.status(400).json({ success: false, message: 'Invalid user IDs' });
       return;
     }
 

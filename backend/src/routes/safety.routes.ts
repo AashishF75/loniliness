@@ -5,6 +5,7 @@ import { reportUser, blockUser, unblockUser, getBlockedUsers } from '../controll
 const router = express.Router();
 
 router.post('/report', protect, reportUser);
+router.post('/block', protect, blockUser);
 router.post('/block/:userId', protect, blockUser);
 router.delete('/block/:userId', protect, unblockUser);
 router.get('/blocks', protect, getBlockedUsers);

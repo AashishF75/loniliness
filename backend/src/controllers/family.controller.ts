@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
+import { isValidObjectId } from '../utils/validation';
 
 /**
  * Authorization helper: Checks if a family member is allowed to view parent's activities.
@@ -302,6 +303,11 @@ export const acceptFamilyInvitation = async (req: Request | any, res: Response):
       return;
     }
 
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid invitation ID format' });
+      return;
+    }
+
     const relationship = await prisma.familyRelationship.findUnique({
       where: { id },
       include: { parent: true, member: true }
@@ -402,6 +408,11 @@ export const rejectFamilyInvitation = async (req: Request | any, res: Response):
 
     if (!userId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid invitation ID format' });
       return;
     }
 
@@ -509,6 +520,11 @@ export const removeFamilyMember = async (req: Request | any, res: Response): Pro
       return;
     }
 
+    if (!relationshipId || !isValidObjectId(relationshipId)) {
+      res.status(400).json({ success: false, message: 'Invalid relationship ID format' });
+      return;
+    }
+
     const relationship = await prisma.familyRelationship.findUnique({
       where: { id: relationshipId },
       include: { permissions: true }
@@ -568,6 +584,11 @@ export const getFamilyPermissions = async (req: Request | any, res: Response): P
       return;
     }
 
+    if (!relationshipId || !isValidObjectId(relationshipId)) {
+      res.status(400).json({ success: false, message: 'Invalid relationship ID format' });
+      return;
+    }
+
     const relationship = await prisma.familyRelationship.findUnique({
       where: { id: relationshipId },
       include: { permissions: true }
@@ -606,6 +627,11 @@ export const updateFamilyPermissions = async (req: Request | any, res: Response)
 
     if (!userId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    if (!relationshipId || !isValidObjectId(relationshipId)) {
+      res.status(400).json({ success: false, message: 'Invalid relationship ID format' });
       return;
     }
 
@@ -724,7 +750,7 @@ export const getFamilyMemberEvents = async (req: Request | any, res: Response): 
     const userId = req.user?.id;
     const { targetUserId } = req.params;
 
-    if (!userId || !targetUserId || targetUserId === 'undefined' || targetUserId.length !== 24) {
+    if (!userId || !targetUserId || !isValidObjectId(targetUserId)) {
       res.status(400).json({ success: false, message: 'Invalid target user ID' });
       return;
     }

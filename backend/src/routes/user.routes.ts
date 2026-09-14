@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.put('/profile', protect, updateUserProfile);
 router.get('/nearby', protect, getNearbyUsers);
+router.get('/profile/:id', protect, getUserProfile);
 router.get('/:id', protect, getUserProfile);
 
 export default router;

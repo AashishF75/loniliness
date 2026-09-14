@@ -94,7 +94,7 @@ export function initializeSocket(server: HttpServer): Server {
       data: any,
       callback?: (response: { success: boolean; message?: string; error?: string; location?: any }) => void
     ) => {
-      const parentId = typeof data === 'string' ? data : data?.parentId;
+      const parentId = typeof data === 'string' ? data : (data?.parentId || data?.seniorId);
 
       if (!user) {
         const errorMsg = 'Unauthorized: Unauthenticated socket connection';
@@ -224,6 +224,7 @@ function isValidCoordinate(data: any): boolean {
     socket.on('join:location', handleJoinLocation);
     socket.on('location:subscribe', handleJoinLocation);
     socket.on('join_room', handleJoinLocation);
+    socket.on('join_location_room', handleJoinLocation);
 
     // Handle parent location update event
     socket.on(

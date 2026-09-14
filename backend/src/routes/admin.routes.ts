@@ -1,6 +1,19 @@
 import { Router } from 'express';
 import { protect, adminOnly } from '../middleware/auth.middleware';
-import { getDashboardStats, getUsers, getReports, resolveReport, suspendUser, activateUser, getEvents, removeEvent } from '../controllers/admin.controller';
+import {
+  getDashboardStats,
+  getUsers,
+  getReports,
+  resolveReport,
+  suspendUser,
+  activateUser,
+  getEvents,
+  removeEvent,
+  getVerificationRequests,
+  getVerificationRequestById,
+  streamVerificationDocument,
+  reviewVerificationRequest
+} from '../controllers/admin.controller';
 
 const router = Router();
 
@@ -15,5 +28,12 @@ router.put('/users/:id/suspend', suspendUser);
 router.put('/users/:id/activate', activateUser);
 router.get('/events', getEvents);
 router.delete('/events/:id', removeEvent);
+
+// Senior Verification Moderation
+router.get('/verification/requests', getVerificationRequests);
+router.get('/verification/requests/:id', getVerificationRequestById);
+router.get('/verification/document/:id/:type', streamVerificationDocument);
+router.put('/verification/requests/:id/review', reviewVerificationRequest);
+router.post('/verification/requests/:id/review', reviewVerificationRequest);
 
 export default router;

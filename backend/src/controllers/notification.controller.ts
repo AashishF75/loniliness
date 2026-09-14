@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../db';
+import { isValidObjectId } from '../utils/validation';
 
 export const getNotifications = async (req: Request | any, res: Response): Promise<void> => {
   try {
@@ -138,6 +139,11 @@ export const markAsRead = async (req: Request | any, res: Response): Promise<voi
 
     if (!userId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid notification ID' });
       return;
     }
 

@@ -482,7 +482,9 @@
     "suspendConfirm": "Are you sure you want to suspend {{name}}?\nThey will no longer be able to access Saathi.",
     "removeEventConfirm": "Are you sure you want to remove the event \"{{title}}\"?\nThis event will no longer be visible to users.",
     "saathiAdmin": "Saathi Admin",
-    "logout": "Logout"
+    "logout": "Logout",
+    "seniorVerifications": "Senior Verifications",
+    "verificationRequests": "Senior Citizen Verification Requests"
   },
   "language": {
     "title": "Choose Your Language",
@@ -494,5 +496,15 @@
     "bhojpuri": "Bhojpuri",
     "continue": "Continue",
     "changeLanguage": "Change Language"
+  },
+  "verification": {
+    "title": "Senior Citizen Verification",
+    "subtitle": "Verify your date of birth with a government or senior identity card to unlock peer connections.",
+    "verifiedSenior": "Verified Senior",
+    "unverified": "Unverified",
+    "pending": "Pending Review",
+    "needsReview": "Needs Review",
+    "rejected": "Verification Rejected",
+    "verifiedBadgeDesc": "Verified Senior Citizen — Age (50+) & Identity Checked"
   }
 }

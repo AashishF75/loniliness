@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { toGeoJsonPoint } from '../utils/geo';
+import { isValidObjectId } from '../utils/validation';
 
 // Helper to determine event status dynamically
 function getEventStatus(event: any) {
@@ -51,6 +52,17 @@ export const createEvent = async (req: Request | any, res: Response): Promise<vo
     if (!userId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
       return;
+    }
+
+    const creatorUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (creatorUser?.role === 'SENIOR') {
+      if (creatorUser.verificationStatus !== 'VERIFIED' || creatorUser.verified !== true) {
+        res.status(403).json({
+          success: false,
+          message: 'Please verify your Senior Citizen identity before hosting community events.'
+        });
+        return;
+      }
     }
 
     const { title, description, category, location, latitude, longitude, date, startTime, endTime, maxParticipants } = req.body;
@@ -356,6 +368,11 @@ export const getEventById = async (req: Request | any, res: Response): Promise<v
     const { id } = req.params;
     const userId = req.user?.id;
 
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
+
     const event = await prisma.event.findUnique({
       where: { id },
       include: {
@@ -423,6 +440,11 @@ export const joinEvent = async (req: Request | any, res: Response): Promise<void
     }
 
     const { id } = req.params;
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
 
     const event = await prisma.event.findUnique({
       where: { id },
@@ -498,6 +520,11 @@ export const leaveEvent = async (req: Request | any, res: Response): Promise<voi
 
     const { id } = req.params;
 
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
+
     const event = await prisma.event.findUnique({ where: { id } });
 
     if (!event || event.status === 'REMOVED') {
@@ -543,6 +570,12 @@ export const updateEvent = async (req: Request | any, res: Response): Promise<vo
     }
 
     const { id } = req.params;
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
+
     const { title, description, category, location, latitude, longitude, date, startTime, endTime, maxParticipants } = req.body;
 
     const event = await prisma.event.findUnique({ where: { id } });
@@ -617,6 +650,11 @@ export const deleteEvent = async (req: Request | any, res: Response): Promise<vo
 
     const { id } = req.params;
 
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
+
     const event = await prisma.event.findUnique({ where: { id } });
 
     if (!event || event.status === 'REMOVED') {
@@ -644,6 +682,11 @@ export const saveEvent = async (req: Request | any, res: Response): Promise<void
     if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
 
     const { id } = req.params;
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
 
     const event = await prisma.event.findUnique({ where: { id } });
     if (!event || event.status === 'REMOVED') {
@@ -677,6 +720,11 @@ export const unsaveEvent = async (req: Request | any, res: Response): Promise<vo
 
     const { id } = req.params;
 
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
+
     await prisma.savedEvent.delete({
       where: { eventId_userId: { eventId: id, userId } }
     }).catch(() => {});
@@ -693,6 +741,12 @@ export const cancelEvent = async (req: Request | any, res: Response): Promise<vo
     if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
 
     const { id } = req.params;
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
+
     const event = await prisma.event.findUnique({ where: { id }, include: { participants: true } });
 
     if (!event || event.status === 'REMOVED') { res.status(404).json({ success: false, message: 'Event not found' }); return; }
@@ -729,6 +783,11 @@ export const getEventMessages = async (req: Request | any, res: Response): Promi
     if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
 
     const { id } = req.params;
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
 
     // Check if event exists and user is participant
     const event = await prisma.event.findUnique({
@@ -771,6 +830,11 @@ export const sendEventMessage = async (req: Request | any, res: Response): Promi
 
     const { id } = req.params;
     const { content } = req.body;
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid event ID' });
+      return;
+    }
 
     if (!content || typeof content !== 'string' || content.trim() === '') {
       res.status(400).json({ success: false, message: 'Message content is required' });

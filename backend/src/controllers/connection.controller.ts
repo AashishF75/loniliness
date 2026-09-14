@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
+import { isValidObjectId } from '../utils/validation';
 
 export const sendConnectionRequest = async (req: Request | any, res: Response): Promise<void> => {
   try {
     const senderId = req.user?.id;
     const { targetUserId } = req.body;
 
-    if (!senderId || !targetUserId) {
-      res.status(400).json({ success: false, message: 'Missing user IDs' });
+    if (!senderId || !targetUserId || !isValidObjectId(targetUserId)) {
+      res.status(400).json({ success: false, message: 'Invalid target user ID' });
       return;
     }
 
@@ -20,6 +21,23 @@ export const sendConnectionRequest = async (req: Request | any, res: Response): 
     if (!targetUser) {
       res.status(404).json({ success: false, message: 'Target user not found' });
       return;
+    }
+
+    const senderUser = await prisma.user.findUnique({ where: { id: senderId } });
+    if (!senderUser) {
+      res.status(404).json({ success: false, message: 'Sender user not found' });
+      return;
+    }
+
+    // Protection rule: Unverified seniors cannot send unsolicited connection requests to seniors
+    if (senderUser.role === 'SENIOR' && targetUser.role === 'SENIOR') {
+      if (senderUser.verificationStatus !== 'VERIFIED' || senderUser.verified !== true) {
+        res.status(403).json({
+          success: false,
+          message: 'Please verify your Senior Citizen identity before connecting with peers in the community.'
+        });
+        return;
+      }
     }
 
     // Check if there is a block
@@ -60,7 +78,6 @@ export const sendConnectionRequest = async (req: Request | any, res: Response): 
     });
 
     // Dual Sync: If connecting a SENIOR and a FAMILY user, sync FamilyRelationship table
-    const senderUser = await prisma.user.findUnique({ where: { id: senderId } });
     if (senderUser && targetUser) {
       if ((senderUser.role === 'SENIOR' && targetUser.role === 'FAMILY') || (senderUser.role === 'FAMILY' && targetUser.role === 'SENIOR')) {
         const parentId = senderUser.role === 'SENIOR' ? senderUser.id : targetUser.id;
@@ -142,6 +159,11 @@ export const updateConnectionStatus = async (req: Request | any, res: Response):
 
     if (!userId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid connection ID' });
       return;
     }
 
@@ -299,6 +321,11 @@ export const removeConnection = async (req: Request | any, res: Response): Promi
 
     if (!userId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid connection ID' });
       return;
     }
 

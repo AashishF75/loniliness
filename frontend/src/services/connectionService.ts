@@ -24,7 +24,9 @@ export const connectionService = {
         params.append('latitude', user.latitude.toString());
         params.append('longitude', user.longitude.toString());
       }
-      params.append('radius', (filters?.radius || 10).toString());
+      if (filters?.radius) {
+        params.append('radius', filters.radius.toString());
+      }
       if (filters?.search) params.append('search', filters.search);
       if (filters?.interest) params.append('interest', filters.interest);
       if (filters?.commonInterestsOnly) params.append('commonInterestsOnly', 'true');

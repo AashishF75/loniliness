@@ -13,6 +13,22 @@ export function Register() {
   const [searchParams] = useSearchParams();
   const paramRole = searchParams.get('role')?.toUpperCase();
 
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    age: '',
+    dob: '',
+    location: '',
+    latitude: '',
+    longitude: ''
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [locationMessage, setLocationMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [detecting, setDetecting] = useState(false);
+
   // Role selection screen if no valid query parameter is provided
   if (paramRole !== 'SENIOR' && paramRole !== 'FAMILY') {
     return (
@@ -82,21 +98,6 @@ export function Register() {
 
   const role: 'SENIOR' | 'FAMILY' = paramRole === 'FAMILY' ? 'FAMILY' : 'SENIOR';
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    age: '',
-    location: '',
-    latitude: '',
-    longitude: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [locationMessage, setLocationMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [detecting, setDetecting] = useState(false);
-
   const handleDetectLocation = () => {
     if (detecting) return;
     if (!navigator.geolocation) {
@@ -158,22 +159,56 @@ export function Register() {
     );
   };
 
+  const computeAgeFromDob = (dobStr: string): number | null => {
+    if (!dobStr) return null;
+    const parts = dobStr.split('-');
+    if (parts.length !== 3) return null;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+
+    const birthDate = new Date(year, month - 1, day);
+    const today = new Date();
+    let calculated = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      calculated--;
+    }
+    return calculated;
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.password || !formData.age || !formData.location) {
-      setError('Please fill in all fields.');
+    if (!formData.name || !formData.email || !formData.password || !formData.location) {
+      setError('Please fill in all required fields.');
       return;
     }
 
-    const parsedAge = parseInt(formData.age, 10);
-    if (isNaN(parsedAge) || parsedAge <= 0) {
-      setError('Please enter a valid age.');
-      return;
-    }
-
-    if (role === 'SENIOR' && parsedAge < 50) {
-      setError('Saathi is designed for senior citizens aged 50 and above.');
-      return;
+    if (role === 'SENIOR') {
+      if (!formData.dob) {
+        setError('Please enter your Date of Birth.');
+        return;
+      }
+      const age = computeAgeFromDob(formData.dob);
+      if (age === null || age < 0) {
+        setError('Please enter a valid Date of Birth.');
+        return;
+      }
+      if (age < 50) {
+        setError(`Saathi is designed for senior citizens aged 50 and above. (Your calculated age is ${age})`);
+        return;
+      }
+    } else {
+      if (!formData.age) {
+        setError('Please enter your age.');
+        return;
+      }
+      const parsedAge = parseInt(formData.age, 10);
+      if (isNaN(parsedAge) || parsedAge <= 0 || parsedAge > 120) {
+        setError('Please enter a valid age.');
+        return;
+      }
     }
 
     setError('');
@@ -230,19 +265,48 @@ export function Register() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <label className="text-xl font-bold text-gray-800">Age</label>
-            <div className="relative">
-              <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-7 h-7 text-gray-400" />
-              <Input
-                type="number"
-                value={formData.age}
-                onChange={(e) => setFormData({...formData, age: e.target.value})}
-                placeholder="Enter your age"
-                className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
-              />
+          {role === 'SENIOR' ? (
+            <div className="flex flex-col gap-3">
+              <label className="text-xl font-bold text-gray-800">Date of Birth</label>
+              <div className="relative">
+                <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-7 h-7 text-gray-400" />
+                <Input
+                  type="date"
+                  value={formData.dob}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const calculated = computeAgeFromDob(val);
+                    setFormData({
+                      ...formData,
+                      dob: val,
+                      age: calculated !== null ? calculated.toString() : ''
+                    });
+                  }}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
+                />
+              </div>
+              {formData.age && (
+                <p className={`text-base font-bold ml-2 ${parseInt(formData.age, 10) >= 50 ? 'text-brand-700' : 'text-red-600'}`}>
+                  Calculated Age: {formData.age} years old {parseInt(formData.age, 10) < 50 ? '(Requires 50+)' : '✓'}
+                </p>
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <label className="text-xl font-bold text-gray-800">Age</label>
+              <div className="relative">
+                <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-7 h-7 text-gray-400" />
+                <Input
+                  type="number"
+                  value={formData.age}
+                  onChange={(e) => setFormData({...formData, age: e.target.value})}
+                  placeholder="Enter your age"
+                  className="pl-16 h-16 text-lg sm:text-xl rounded-2xl bg-gray-50 border-2 border-gray-200"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3">
             <label className="text-xl font-bold text-gray-800">Location (City or Area)</label>
@@ -303,7 +367,16 @@ export function Register() {
             </div>
           </div>
 
-          <Button type="submit" size="lg" className="h-16 sm:h-[72px] text-xl sm:text-2xl font-bold shadow-md w-full mt-4" disabled={loading}>
+          {role === 'SENIOR' && (
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-900 font-medium">
+                To safeguard senior members from impersonators, you will be invited to verify your identity with an ID photo after joining before sending companion requests.
+              </p>
+            </div>
+          )}
+
+          <Button type="submit" size="lg" className="h-16 sm:h-[72px] text-xl sm:text-2xl font-bold shadow-md w-full mt-2" disabled={loading}>
             {loading ? '...' : (
               <span className="flex items-center justify-center">
                 {t('auth.register')} <ArrowRight className="w-7 h-7 ml-3" />

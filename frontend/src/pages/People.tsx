@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { VerifiedBadge } from '../components/ui/VerifiedBadge';
+import { VerificationBanner } from '../components/VerificationBanner';
 import { connectionService } from '../services/connectionService';
 import { userService } from '../services/userService';
 
@@ -12,6 +14,7 @@ export function People() {
   const { t } = useTranslation();
   const [userInterests, setUserInterests] = useState<string[]>([]);
   const [people, setPeople] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [loadingIds, setLoadingIds] = useState<string[]>([]);
   const [connectedIds, setConnectedIds] = useState<string[]>([]);
@@ -31,6 +34,7 @@ export function People() {
     setLoading(true);
     try {
       const user = await userService.getUser();
+      setCurrentUser(user);
       if (user?.interests) setUserInterests(user.interests);
 
       const activeRadius = filtersObj?.radius !== undefined ? filtersObj.radius : radius;
@@ -91,16 +95,22 @@ export function People() {
   }
 
   const handleConnect = async (person: any) => {
+    if (currentUser?.role === 'SENIOR' && currentUser?.verificationStatus !== 'VERIFIED') {
+      navigate('/verify');
+      return;
+    }
     setLoadingIds(prev => [...prev, person.id]);
     await connectionService.sendConnectionRequest(person);
     setLoadingIds(prev => prev.filter(id => id !== person.id));
     setConnectedIds(prev => [...prev, person.id]);
   };
 
-
-
   return (
     <div className="flex flex-col gap-6 md:gap-8 pb-8">
+      {currentUser && (
+        <VerificationBanner status={currentUser.verificationStatus} verified={currentUser.verified} role={currentUser.role} />
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">{t('people.nearbyPeople')}</h1>
         <Button variant="outline" className="border-gray-200 text-gray-700 bg-gray-50 h-14" onClick={() => setFilterOpen(!filterOpen)}>
@@ -196,7 +206,12 @@ export function People() {
                   <User className="w-12 h-12 lg:w-16 lg:h-16" />
                 </div>
                 <div className="text-left lg:text-center">
-                  <h2 className="text-3xl font-extrabold text-gray-900 mb-1">{profile.name}</h2>
+                  <div className="flex items-center justify-start lg:justify-center gap-2 mb-1 flex-wrap">
+                    <h2 className="text-3xl font-extrabold text-gray-900">{profile.name}</h2>
+                    {(profile.verified === true && profile.verificationStatus === 'VERIFIED') && (
+                      <VerifiedBadge size="sm" />
+                    )}
+                  </div>
                   <p className="text-xl text-gray-500 font-medium">{t('people.age')} {profile.age}</p>
                 </div>
               </div>
@@ -243,15 +258,26 @@ export function People() {
                 >
                   <Eye className="w-6 h-6 mr-2" /> {t('people.viewProfile')}
                 </Button>
-                <Button
-                  size="lg"
-                  className={`w-full sm:w-40 lg:w-48 h-16 text-xl lg:text-2xl font-bold shadow-md ${isConnected ? 'bg-green-100 text-green-800 border-2 border-green-500 hover:bg-green-200 shadow-none' : ''}`}
-                  onClick={() => handleConnect(profile)}
-                  disabled={isConnected || isLoading}
-                  variant={isConnected ? 'outline' : 'primary'}
-                >
-                  {isLoading ? '...' : isConnected ? <><Check className="w-6 h-6 mr-2"/> {t('people.requestSent')}</> : t('people.connect')}
-                </Button>
+                {!isConnected && currentUser?.role === 'SENIOR' && (currentUser?.verificationStatus !== 'VERIFIED' || !currentUser?.verified) ? (
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-40 lg:w-48 h-16 text-base lg:text-lg font-bold border-2 border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 shadow-sm"
+                    onClick={() => navigate('/verify')}
+                    title="Verify your Senior Citizen status to connect with peers"
+                  >
+                    Verify to Connect
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    className={`w-full sm:w-40 lg:w-48 h-16 text-xl lg:text-2xl font-bold shadow-md ${isConnected ? 'bg-green-100 text-green-800 border-2 border-green-500 hover:bg-green-200 shadow-none' : ''}`}
+                    onClick={() => handleConnect(profile)}
+                    disabled={isConnected || isLoading}
+                    variant={isConnected ? 'outline' : 'primary'}
+                  >
+                    {isLoading ? '...' : isConnected ? <><Check className="w-6 h-6 mr-2"/> {t('people.requestSent')}</> : t('people.connect')}
+                  </Button>
+                )}
               </div>
             </Card>
           );

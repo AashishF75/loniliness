@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { User, MapPin, Sparkles, Check, ArrowLeft, Loader2, Heart } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { VerifiedBadge } from '../components/ui/VerifiedBadge';
 import { userService } from '../services/userService';
 import { connectionService } from '../services/connectionService';
 import { safetyService } from '../services/safetyService';
@@ -16,6 +17,7 @@ export function PublicProfile() {
   const distance = location.state?.distance; // Distance passed from People page
 
   const [profile, setProfile] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -45,6 +47,8 @@ export function PublicProfile() {
           setProfile(publicProfile);
         }
 
+        setCurrentUser(currentUser);
+
         if (currentUser?.hobbies) {
           setUserInterests(currentUser.hobbies.map((h: any) => h.name));
         } else if (currentUser?.interests) {
@@ -69,6 +73,10 @@ export function PublicProfile() {
 
   const handleConnect = async () => {
     if (!profile) return;
+    if (currentUser?.role === 'SENIOR' && currentUser?.verificationStatus !== 'VERIFIED') {
+      navigate('/verify');
+      return;
+    }
     setIsSending(true);
     const result = await connectionService.sendConnectionRequest(profile);
     setIsSending(false);
@@ -158,9 +166,14 @@ export function PublicProfile() {
             </div>
 
             <div className="flex-1 text-center md:text-left pb-2">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight break-words">
-                {profile.name}
-              </h1>
+              <div className="flex items-center justify-center md:justify-start gap-3 flex-wrap">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight break-words">
+                  {profile.name}
+                </h1>
+                {profile.verified === true && profile.verificationStatus === 'VERIFIED' && (
+                  <VerifiedBadge size="md" />
+                )}
+              </div>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-4 mt-3">
                 <span className="text-base sm:text-xl font-medium text-gray-600 flex items-center gap-1">
                   {profile.age !== null && profile.age !== undefined ? t('publicProfile.ageVal', { age: profile.age }) : t('publicProfile.ageHidden')}
@@ -174,15 +187,26 @@ export function PublicProfile() {
             </div>
 
             <div className="w-full md:w-auto shrink-0 pb-2">
-              <Button
-                size="lg"
-                className={`w-full md:w-48 h-16 text-xl font-bold shadow-md ${connectionStatus === 'CONNECTED' ? 'bg-green-100 text-green-800 border-2 border-green-500' : isConnected ? 'bg-gray-100 text-gray-800 border-2 border-gray-300' : ''}`}
-                onClick={handleConnect}
-                disabled={isConnected || isSending}
-                variant={connectionStatus === 'CONNECTED' ? 'outline' : isConnected ? 'outline' : 'primary'}
-              >
-                {isSending ? t('publicProfile.sending') : connectionStatus === 'CONNECTED' ? t('publicProfile.connected') : connectionStatus === 'PENDING' ? t('publicProfile.requestSent') : t('publicProfile.connect')}
-              </Button>
+              {!isConnected && currentUser?.role === 'SENIOR' && currentUser?.verificationStatus !== 'VERIFIED' ? (
+                <Button
+                  size="lg"
+                  className="w-full md:w-48 h-16 text-base md:text-lg font-bold border-2 border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 shadow-sm"
+                  onClick={() => navigate('/verify')}
+                  title="Verify your Senior Citizen status to connect with peers"
+                >
+                  Verify to Connect
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  className={`w-full md:w-48 h-16 text-xl font-bold shadow-md ${connectionStatus === 'CONNECTED' ? 'bg-green-100 text-green-800 border-2 border-green-500' : isConnected ? 'bg-gray-100 text-gray-800 border-2 border-gray-300' : ''}`}
+                  onClick={handleConnect}
+                  disabled={isConnected || isSending}
+                  variant={connectionStatus === 'CONNECTED' ? 'outline' : isConnected ? 'outline' : 'primary'}
+                >
+                  {isSending ? t('publicProfile.sending') : connectionStatus === 'CONNECTED' ? t('publicProfile.connected') : connectionStatus === 'PENDING' ? t('publicProfile.requestSent') : t('publicProfile.connect')}
+                </Button>
+              )}
               <div className="flex gap-4 mt-2 justify-center md:justify-start">
                 <button
                   onClick={() => setShowReportModal(true)}

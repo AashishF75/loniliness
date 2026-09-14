@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { toGeoJsonPoint } from '../utils/geo';
+import { isValidObjectId } from '../utils/validation';
 
 // Haversine formula
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -193,6 +194,8 @@ export const getNearbyUsers = async (req: Request | any, res: Response): Promise
           locality: safeLocality,
           avatar: u.avatar || null,
           bio: u.bio || null,
+          verified: u.verified || false,
+          verificationStatus: u.verificationStatus || 'UNVERIFIED',
           showLocation: u.showLocation,
           interests: userHobbyNames,
           distance,
@@ -237,6 +240,8 @@ export const getNearbyUsers = async (req: Request | any, res: Response): Promise
           locality: true,
           avatar: true,
           bio: true,
+          verified: true,
+          verificationStatus: true,
           showLocation: true,
           hobbies: { select: { name: true } }
         },
@@ -289,8 +294,8 @@ export const getUserProfile = async (req: Request | any, res: Response): Promise
   try {
     const { id } = req.params;
 
-    if (!id) {
-      res.status(400).json({ success: false, message: 'User ID is required' });
+    if (!id || !isValidObjectId(id)) {
+      res.status(400).json({ success: false, message: 'Invalid user ID format' });
       return;
     }
 
@@ -304,6 +309,9 @@ export const getUserProfile = async (req: Request | any, res: Response): Promise
         locality: true,
         bio: true,
         avatar: true,
+        role: true,
+        verified: true,
+        verificationStatus: true,
         showAge: true,
         showLocation: true,
         showInterests: true,
@@ -348,31 +356,115 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
       return;
     }
 
-    const { name, age, city, locality, bio, interests, eventReminder, showAge, showLocation, showInterests, latitude, longitude } = req.body;
+    const curUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!curUser) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    // 1. Role Immutability: Prevent role escalation (FAMILY -> SENIOR, SENIOR -> ADMIN, etc.)
+    if (req.body.role !== undefined && req.body.role !== curUser.role) {
+      res.status(403).json({ success: false, message: 'User role cannot be modified.' });
+      return;
+    }
+
+    // 2. Verification Security: Prevent self-assignment of verified status
+    if (req.body.verified !== undefined && req.body.verified !== curUser.verified) {
+      res.status(403).json({ success: false, message: 'Verification status cannot be self-assigned.' });
+      return;
+    }
+    if (req.body.verificationStatus !== undefined && req.body.verificationStatus !== curUser.verificationStatus) {
+      res.status(403).json({ success: false, message: 'Verification status cannot be self-assigned.' });
+      return;
+    }
+
+    // 3. Prevent modification of internal security, audit, and account fields
+    const restrictedFields = [
+      'verificationReviewedById',
+      'verificationReviewedAt',
+      'verificationSubmittedAt',
+      'verifiedAt',
+      'verificationFailureReason',
+      'status',
+      'email'
+    ];
+    for (const field of restrictedFields) {
+      if (req.body[field] !== undefined) {
+        res.status(403).json({ success: false, message: `Field '${field}' cannot be modified via profile update.` });
+        return;
+      }
+    }
+
+    // 4. DOB Immutability: DOB is strictly immutable once registered
+    if (req.body.dob !== undefined) {
+      res.status(400).json({
+        success: false,
+        message: 'Date of birth is immutable once registered.'
+      });
+      return;
+    }
+
+    // 5. Senior Age Immutability: Age for a Senior is strictly derived from DOB and cannot be modified
+    if (curUser.role === 'SENIOR' && req.body.age !== undefined) {
+      res.status(400).json({
+        success: false,
+        message: 'Senior citizen age is determined by Date of Birth and cannot be manually modified.'
+      });
+      return;
+    }
 
     const updateData: any = {};
-    if (name) updateData.name = name;
-    if (age !== undefined) updateData.age = age;
-    if (city !== undefined) updateData.city = city;
-    if (locality !== undefined) updateData.locality = locality;
-    if (bio !== undefined) updateData.bio = bio;
+    const { name, age, city, locality, bio, interests, eventReminder, showAge, showLocation, showInterests, latitude, longitude } = req.body;
+
+    if (name !== undefined) {
+      if (typeof name !== 'string' || !name.trim()) {
+        res.status(400).json({ success: false, message: 'Name cannot be empty.' });
+        return;
+      }
+      updateData.name = name.trim();
+    }
+
+    // Family members can update general age
+    if (curUser.role === 'FAMILY' && age !== undefined) {
+      const parsedAge = parseInt(age, 10);
+      if (isNaN(parsedAge) || parsedAge <= 0 || parsedAge > 130) {
+        res.status(400).json({ success: false, message: 'Please provide a valid age.' });
+        return;
+      }
+      updateData.age = parsedAge;
+    }
+
+    if (city !== undefined) updateData.city = city ? String(city).trim() : null;
+    if (locality !== undefined) updateData.locality = locality ? String(locality).trim() : null;
+    if (bio !== undefined) updateData.bio = bio ? String(bio).trim() : null;
     if (eventReminder !== undefined) updateData.eventReminder = eventReminder;
-    if (showAge !== undefined) updateData.showAge = showAge;
-    if (showLocation !== undefined) updateData.showLocation = showLocation;
-    if (showInterests !== undefined) updateData.showInterests = showInterests;
-    if (latitude !== undefined) updateData.latitude = parseFloat(latitude);
-    if (longitude !== undefined) updateData.longitude = parseFloat(longitude);
+    if (showAge !== undefined) updateData.showAge = Boolean(showAge);
+    if (showLocation !== undefined) updateData.showLocation = Boolean(showLocation);
+    if (showInterests !== undefined) updateData.showInterests = Boolean(showInterests);
+
+    if (latitude !== undefined && latitude !== null && latitude !== '') {
+      const latVal = parseFloat(latitude);
+      if (!isNaN(latVal) && latVal >= -90 && latVal <= 90) {
+        updateData.latitude = latVal;
+      }
+    }
+    if (longitude !== undefined && longitude !== null && longitude !== '') {
+      const lonVal = parseFloat(longitude);
+      if (!isNaN(lonVal) && lonVal >= -180 && lonVal <= 180) {
+        updateData.longitude = lonVal;
+      }
+    }
 
     if (updateData.latitude !== undefined || updateData.longitude !== undefined) {
-      const curUser = await prisma.user.findUnique({ where: { id: userId } });
-      const finalLat = updateData.latitude !== undefined ? updateData.latitude : curUser?.latitude;
-      const finalLon = updateData.longitude !== undefined ? updateData.longitude : curUser?.longitude;
+      const finalLat = updateData.latitude !== undefined ? updateData.latitude : curUser.latitude;
+      const finalLon = updateData.longitude !== undefined ? updateData.longitude : curUser.longitude;
       updateData.locationGeoJson = toGeoJsonPoint(finalLat, finalLon);
     }
 
     if (interests && Array.isArray(interests)) {
       const hobbyIds = [];
       for (const interest of interests) {
+        if (typeof interest !== 'string') continue;
         const trimmed = interest.trim();
         if (!trimmed) continue;
         let hobby = await prisma.hobby.findUnique({ where: { name: trimmed } });
@@ -391,10 +483,13 @@ export const updateUserProfile = async (req: Request | any, res: Response): Prom
         id: true,
         name: true,
         age: true,
+        dob: true,
         city: true,
         locality: true,
         bio: true,
         avatar: true,
+        verified: true,
+        verificationStatus: true,
         eventReminder: true,
         showAge: true,
         showLocation: true,

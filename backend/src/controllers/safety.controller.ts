@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../db';
+import { isValidObjectId } from '../utils/validation';
 
 export const reportUser = async (req: Request | any, res: Response): Promise<void> => {
   try {
@@ -11,8 +12,8 @@ export const reportUser = async (req: Request | any, res: Response): Promise<voi
 
     const { reportedUserId, reason, description } = req.body;
 
-    if (!reportedUserId || !reason) {
-      res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!reportedUserId || !isValidObjectId(reportedUserId) || !reason) {
+      res.status(400).json({ success: false, message: 'Missing or invalid required fields' });
       return;
     }
 
@@ -45,10 +46,10 @@ export const blockUser = async (req: Request | any, res: Response): Promise<void
       return;
     }
 
-    const { userId: blockedId } = req.params;
+    const blockedId = req.params.userId || req.body?.userId;
 
-    if (!blockedId) {
-      res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!blockedId || !isValidObjectId(blockedId)) {
+      res.status(400).json({ success: false, message: 'Invalid user ID' });
       return;
     }
 
@@ -93,8 +94,8 @@ export const unblockUser = async (req: Request | any, res: Response): Promise<vo
 
     const { userId: blockedId } = req.params;
 
-    if (!blockedId) {
-      res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!blockedId || !isValidObjectId(blockedId)) {
+      res.status(400).json({ success: false, message: 'Invalid user ID' });
       return;
     }
 

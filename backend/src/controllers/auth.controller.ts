@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../index';
+import { prisma } from '../db';
+import { toGeoJsonPoint } from '../utils/geo';
+import { parseAndValidateDob, calculateAgeFromDob } from '../utils/dateValidation';
 
 const generateToken = (id: string) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'secret', {
@@ -11,7 +13,7 @@ const generateToken = (id: string) => {
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, name, password, age, location, role, latitude, longitude } = req.body;
+    const { email, name, password, age, dob, location, role, latitude, longitude } = req.body;
 
     if (!email || !name || !password) {
       res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -24,19 +26,87 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Explicit role authorization - only SENIOR and FAMILY may be registered publicly
+    const selectedRole = role === 'FAMILY' ? 'FAMILY' : 'SENIOR';
+
+    let resolvedAge: number | null = null;
+    let resolvedDob: Date | null = null;
+
+    if (selectedRole === 'SENIOR') {
+      // DOB is strictly mandatory for Senior Citizen accounts
+      if (!dob) {
+        res.status(400).json({
+          success: false,
+          message: 'Date of birth is required for Senior Citizen registration.'
+        });
+        return;
+      }
+
+      // Strict validation of calendar date, format, leap years, and future bounds
+      const dobValidation = parseAndValidateDob(dob);
+      if (!dobValidation.valid || !dobValidation.dob) {
+        res.status(400).json({
+          success: false,
+          message: dobValidation.error || 'Invalid Date of Birth.'
+        });
+        return;
+      }
+
+      // Birthday-aware age calculation - backend is the sole authority
+      const serverCalculatedAge = calculateAgeFromDob(dobValidation.dob);
+      if (serverCalculatedAge < 50) {
+        res.status(400).json({
+          success: false,
+          message: 'Senior citizens must be aged 50 or above based on Date of Birth.'
+        });
+        return;
+      }
+
+      resolvedDob = dobValidation.dob;
+      resolvedAge = serverCalculatedAge; // Client-provided age is completely ignored for seniors
+    } else {
+      // FAMILY role: DOB is optional; age is optional and unrestricted
+      if (dob) {
+        const dobValidation = parseAndValidateDob(dob);
+        if (!dobValidation.valid || !dobValidation.dob) {
+          res.status(400).json({
+            success: false,
+            message: dobValidation.error || 'Invalid Date of Birth.'
+          });
+          return;
+        }
+        resolvedDob = dobValidation.dob;
+        resolvedAge = calculateAgeFromDob(dobValidation.dob);
+      } else if (age) {
+        const parsedAge = parseInt(age, 10);
+        if (isNaN(parsedAge) || parsedAge <= 0 || parsedAge > 130) {
+          res.status(400).json({ success: false, message: 'Please enter a valid age.' });
+          return;
+        }
+        resolvedAge = parsedAge;
+      }
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+
+    const latNum = latitude ? parseFloat(latitude) : null;
+    const lonNum = longitude ? parseFloat(longitude) : null;
 
     const user = await prisma.user.create({
       data: {
         email,
         name,
         password: hashedPassword,
-        age: age ? parseInt(age) : null,
+        age: resolvedAge,
+        dob: resolvedDob,
         city: location,
-        role: role || 'SENIOR',
-        latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null,
+        role: selectedRole,
+        verified: false,
+        verificationStatus: 'UNVERIFIED',
+        latitude: latNum,
+        longitude: lonNum,
+        locationGeoJson: toGeoJsonPoint(latNum, lonNum) as any
       },
     });
 
@@ -47,6 +117,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       name: user.name,
       email: user.email,
       role: user.role,
+      verified: user.verified,
+      verificationStatus: user.verificationStatus,
+      dob: user.dob,
+      age: user.age,
       token: generateToken(user.id),
     });
   } catch (error: any) {
@@ -73,6 +147,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         name: user.name,
         email: user.email,
         role: user.role,
+        verified: user.verified,
+        verificationStatus: user.verificationStatus,
+        dob: user.dob,
+        age: user.age,
         token: generateToken(user.id),
       });
     } else {
@@ -88,7 +166,28 @@ export const getMe = async (req: Request | any, res: Response): Promise<void> =>
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, name: true, phone: true, role: true, city: true, age: true, locality: true, bio: true, hobbies: true, latitude: true, longitude: true, eventReminder: true, showAge: true, showLocation: true, showInterests: true }
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+        city: true,
+        age: true,
+        dob: true,
+        locality: true,
+        bio: true,
+        verified: true,
+        verificationStatus: true,
+        verifiedAt: true,
+        verificationFailureReason: true,
+        hobbies: true,
+        latitude: true,
+        longitude: true,
+        eventReminder: true,
+        showAge: true,
+        showLocation: true,
+        showInterests: true
+      }
     });
     res.json(user);
   } catch (error) {

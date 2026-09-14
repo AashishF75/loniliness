@@ -1,13 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
-
-dotenv.config();
+import { prisma } from './db';
+export { prisma };
 
 const app = express();
-export const prisma = new PrismaClient();
-
 app.use(cors());
 app.use(express.json());
 
@@ -21,6 +18,7 @@ import safetyRoutes from './routes/safety.routes';
 import eventRoutes from './routes/event.routes';
 import adminRoutes from './routes/admin.routes';
 import familyRoutes from './routes/family.routes';
+import verificationRoutes from './routes/verification.routes';
 import { globalLimiter } from './middleware/rateLimiter';
 
 // Apply global rate limiting to all API routes
@@ -37,6 +35,7 @@ app.use('/api/safety', safetyRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/family', familyRoutes);
+app.use('/api/verification', verificationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Saathi API is running perfectly.' });
@@ -48,10 +47,13 @@ import { initializeSocket } from './socket';
 const server = http.createServer(app);
 export const io = initializeSocket(server);
 
+import { ensureGeoIndexes } from './utils/geo';
+
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log(`Saathi Backend Server running on port ${PORT}`);
+server.listen(Number(PORT), '0.0.0.0', async () => {
+  console.log(`Saathi Backend Server running on port ${PORT} (host: 0.0.0.0)`);
+  await ensureGeoIndexes();
 });
 
 export { app, server };

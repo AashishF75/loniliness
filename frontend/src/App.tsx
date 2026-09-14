@@ -18,6 +18,7 @@ import { Profile } from './pages/Profile';
 import { PublicProfile } from './pages/PublicProfile';
 import { Events } from './pages/Events';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { Verification } from './pages/Verification';
 
 import { AdminLayout } from './components/layout/AdminLayout';
 
@@ -49,6 +50,7 @@ function App() {
             <Route path="/connections" element={<Connections />} />
             <Route path="/family" element={<Family />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/verify" element={<Verification />} />
             <Route path="/users/:id" element={<PublicProfile />} />
           </Route>
         </Route>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, Settings, Bell, Heart, Edit3, X, Save, Globe } from 'lucide-react';
+import { User, LogOut, Settings, Bell, Heart, Edit3, X, Save, Globe, Shield, ShieldCheck, Clock, AlertCircle, ArrowRight, Lock } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { VerifiedBadge } from '../components/ui/VerifiedBadge';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
 import { safetyService } from '../services/safetyService';
@@ -103,7 +104,12 @@ export function Profile() {
         </div>
         <div className="flex-1 text-center md:text-left flex flex-col gap-2 w-full">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 break-words">{user.name}</h1>
+            <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 break-words">{user.name}</h1>
+              {user.verified === true && user.verificationStatus === 'VERIFIED' && (
+                <VerifiedBadge size="md" />
+              )}
+            </div>
             <Button variant="outline" className="border-gray-200" onClick={handleEditClick}>
               <Edit3 className="w-5 h-5 mr-2" /> {t('profile.editProfile')}
             </Button>
@@ -111,6 +117,55 @@ export function Profile() {
           <p className="text-2xl text-gray-500 font-medium">{t('profile.age')} {user.age} • {user.city}</p>
         </div>
       </div>
+
+      {user.role === 'SENIOR' && (
+        <Card className="p-6 md:p-8 border-2 border-brand-100 bg-linear-to-r from-brand-50/50 to-emerald-50/30 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-2xl shrink-0 ${user.verified === true && user.verificationStatus === 'VERIFIED' ? 'bg-emerald-100 text-emerald-700' : user.verificationStatus === 'NEEDS_REVIEW' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                {user.verified === true && user.verificationStatus === 'VERIFIED' ? (
+                  <ShieldCheck className="w-8 h-8" />
+                ) : user.verificationStatus === 'NEEDS_REVIEW' ? (
+                  <Clock className="w-8 h-8" />
+                ) : (
+                  <Shield className="w-8 h-8" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {user.verified || user.verificationStatus === 'VERIFIED'
+                      ? 'Verified Senior Citizen'
+                      : user.verificationStatus === 'NEEDS_REVIEW'
+                      ? 'Verification Under Review'
+                      : user.verificationStatus === 'REJECTED'
+                      ? 'Verification Not Approved'
+                      : 'Senior Verification Needed'}
+                  </h3>
+                </div>
+                <p className="text-sm sm:text-base text-gray-600 font-medium mt-1">
+                  {user.verified || user.verificationStatus === 'VERIFIED'
+                    ? 'Your age and identity have been confirmed. You can send companion requests freely.'
+                    : user.verificationStatus === 'NEEDS_REVIEW'
+                    ? 'Our safety team is reviewing your identity document.'
+                    : user.verificationStatus === 'REJECTED'
+                    ? (user.verificationFailureReason || 'Your document could not be verified. Please submit a clearer ID photo.')
+                    : 'Verify your identity and age with an ID document to send connection requests to companions.'}
+                </p>
+              </div>
+            </div>
+
+            {(!user.verified && user.verificationStatus !== 'VERIFIED') && (
+              <Button
+                onClick={() => navigate('/verify')}
+                className="w-full sm:w-auto shrink-0 font-bold h-12 px-6 shadow-sm"
+              >
+                {user.verificationStatus === 'NEEDS_REVIEW' ? 'View Status' : 'Verify Now'} <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-8">
@@ -241,7 +296,15 @@ export function Profile() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.age')}</label>
-                <Input type="number" value={editData.age} onChange={e => setEditData({...editData, age: e.target.value})} />
+                {user.verified || user.verificationStatus === 'VERIFIED' || user.verificationStatus === 'NEEDS_REVIEW' ? (
+                  <div className="relative">
+                    <Input type="number" value={editData.age} disabled className="bg-gray-100 text-gray-500 cursor-not-allowed pr-10" />
+                    <Lock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                    <p className="text-xs text-gray-500 mt-1">Verified age is locked to prevent fraud.</p>
+                  </div>
+                ) : (
+                  <Input type="number" value={editData.age} onChange={e => setEditData({...editData, age: e.target.value})} />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">City</label>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, MessageCircle, Check, X, ArrowLeft, Send } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { VerifiedBadge } from '../components/ui/VerifiedBadge';
 import { connectionService } from '../services/connectionService';
 import { safetyService } from '../services/safetyService';
 import { notificationService } from '../services/notificationService';
@@ -248,9 +249,19 @@ export function Connections() {
             <User className="w-7 h-7" />
           </div>
           <div>
-            <h2 className="text-2xl font-extrabold">{activeConnection.name}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-2xl font-extrabold">{activeConnection.name}</h2>
+              {Boolean(activeConnection.verified === true && activeConnection.verificationStatus === 'VERIFIED') && (
+                <VerifiedBadge size="sm" className="bg-emerald-800/60 text-emerald-100 border-emerald-400" />
+              )}
+            </div>
             <p className="text-brand-100 text-lg font-medium">Age {activeConnection.age}</p>
           </div>
+        </div>
+
+        {/* In-chat safety reminder */}
+        <div className="bg-amber-50 px-4 py-2 text-xs sm:text-sm text-amber-900 border-b border-amber-200 flex items-center justify-center text-center font-medium">
+          🛡️ Saathi Safety Tip: Never share passwords, bank details, or verification codes (OTPs) with anyone.
         </div>
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6 bg-slate-50/50">
@@ -309,10 +320,13 @@ export function Connections() {
             <Card key={conn.id} className="flex flex-col md:flex-row gap-6 p-6 items-center hover:border-brand-300 transition-colors">
               <div className="w-20 h-20 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center border-4 border-brand-50 shrink-0"><User className="w-10 h-10" /></div>
               <div className="flex-1 text-center md:text-left min-w-0">
-                <h3 className="text-2xl font-extrabold text-gray-900 mb-1 flex items-center justify-center md:justify-start">
+                <h3 className="text-2xl font-extrabold text-gray-900 mb-1 flex items-center justify-center md:justify-start gap-2 flex-wrap">
                   <span className="truncate">{conn.name}</span>
+                  {Boolean(conn.verified === true && conn.verificationStatus === 'VERIFIED') && (
+                    <VerifiedBadge size="sm" />
+                  )}
                   {conn.unreadCount > 0 && (
-                    <span className="ml-3 inline-flex items-center justify-center w-6 h-6 text-sm font-bold text-white bg-blue-600 rounded-full shadow-sm shrink-0">
+                    <span className="ml-2 inline-flex items-center justify-center w-6 h-6 text-sm font-bold text-white bg-blue-600 rounded-full shadow-sm shrink-0">
                       {conn.unreadCount}
                     </span>
                   )}
