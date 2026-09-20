@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, MapPin, Calendar, Users, MessageCircle, Heart, Sparkles, Activity } from 'lucide-react';
+import { User, MapPin, Calendar, Users, MessageCircle, Heart, Sparkles, Activity, Mic } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { userService } from '../services/userService';
@@ -126,6 +126,22 @@ export function Dashboard() {
                 {t('dashboard.askSaathi')}
               </h2>
               <p className="text-brand-100 text-lg sm:text-xl leading-relaxed">{t('dashboard.aiDesc')}</p>
+
+              {/* Talk to Saathi Quick Voice Button */}
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/ai-companion?voice=true');
+                  }}
+                  className="inline-flex items-center gap-2.5 bg-white text-brand-800 hover:bg-brand-50 px-5 py-3 rounded-2xl font-extrabold text-lg sm:text-xl shadow-md transition-transform active:scale-95 cursor-pointer"
+                  aria-label={t('aiCompanion.talkToSaathi')}
+                >
+                  <Mic className="w-6 h-6 text-brand-600" />
+                  <span>{t('aiCompanion.talkToSaathi')}</span>
+                </button>
+              </div>
             </div>
             <div className="hidden sm:flex w-20 h-20 bg-white/20 rounded-3xl items-center justify-center shrink-0 shadow-inner">
               <MessageCircle className="w-10 h-10 text-white" />

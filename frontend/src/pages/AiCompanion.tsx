@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, User as UserIcon, Bot } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Send, Sparkles, User as UserIcon, Bot, Mic, Volume2, Square } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { aiService } from '../services/aiService';
+import { voiceService } from '../services/voiceService';
+import { VoiceAssistant } from '../components/VoiceAssistant';
 import { useTranslation } from 'react-i18next';
 
 interface Message {
@@ -23,6 +26,7 @@ interface Recommendation {
 
 export function AiCompanion() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const SUGGESTIONS = [
     t('dashboard.findPeopleNearMe'),
     t('dashboard.findActivities'),
@@ -47,7 +51,23 @@ export function AiCompanion() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-open voice assistant if ?voice=true in URL
+  useEffect(() => {
+    if (searchParams.get('voice') === 'true') {
+      setShowVoiceModal(true);
+    }
+  }, [searchParams]);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      voiceService.stopSpeaking();
+    };
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -85,18 +105,62 @@ export function AiCompanion() {
     }
   };
 
+  const handleToggleSpeakMessage = (id: string, text: string) => {
+    if (speakingMsgId === id) {
+      voiceService.stopSpeaking();
+      setSpeakingMsgId(null);
+    } else {
+      setSpeakingMsgId(id);
+      voiceService.speak(text, {
+        onStart: () => setSpeakingMsgId(id),
+        onEnd: () => setSpeakingMsgId(null),
+        onError: () => setSpeakingMsgId(null)
+      });
+    }
+  };
+
+  const handleVoiceExchangeComplete = (userText: string, aiResponse: { content: string; recommendations?: any[] }) => {
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: userText };
+    const assistantMsg: Message = {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: aiResponse.content,
+      recommendations: aiResponse.recommendations && aiResponse.recommendations.length > 0 ? aiResponse.recommendations : undefined
+    };
+    setMessages(prev => [...prev, userMsg, assistantMsg]);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-200px)] bg-slate-50 border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
+      {/* Voice Assistant Modal */}
+      <VoiceAssistant
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        onVoiceExchangeComplete={handleVoiceExchangeComplete}
+      />
+
       {/* Header */}
       <div className="bg-brand-700 text-white p-6 shrink-0 shadow-sm z-10 relative">
-        <div className="flex items-center gap-5">
-          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-inner text-brand-600 shrink-0">
-            <Sparkles className="w-10 h-10" />
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-inner text-brand-600 shrink-0">
+              <Sparkles className="w-10 h-10" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-extrabold mb-1">{t('aiCompanion.saathiAi')}</h1>
+              <p className="text-brand-100 text-lg font-medium leading-tight">{t('aiCompanion.companionDesc')}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-extrabold mb-1">{t('aiCompanion.saathiAi')}</h1>
-            <p className="text-brand-100 text-lg font-medium leading-tight">{t('aiCompanion.companionDesc')}</p>
-          </div>
+
+          {/* Talk to Saathi Header Button */}
+          <button
+            onClick={() => setShowVoiceModal(true)}
+            className="bg-white text-brand-700 hover:bg-brand-50 border-2 border-white/60 px-5 py-3 rounded-2xl font-extrabold text-xl flex items-center gap-3 shadow-md transition-transform active:scale-95"
+            aria-label={t('aiCompanion.talkToSaathi')}
+          >
+            <Mic className="w-7 h-7 text-brand-600" />
+            <span>{t('aiCompanion.talkToSaathi')}</span>
+          </button>
         </div>
       </div>
 
@@ -120,6 +184,28 @@ export function AiCompanion() {
                 }`}>
                   {msg.content}
                 </div>
+
+                {/* Assistant Message Audio Speaker Button */}
+                {msg.role === 'assistant' && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSpeakMessage(msg.id, msg.content)}
+                    className="self-start -mt-2 flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-gray-200 hover:bg-brand-50 hover:border-brand-300 text-gray-700 hover:text-brand-700 font-bold text-base shadow-sm transition-colors cursor-pointer"
+                    title={speakingMsgId === msg.id ? t('aiCompanion.stopSpeaking') : t('aiCompanion.listenAgain')}
+                  >
+                    {speakingMsgId === msg.id ? (
+                      <>
+                        <Square className="w-5 h-5 fill-current text-red-600" />
+                        <span className="text-red-700">{t('aiCompanion.stopSpeaking')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-5 h-5 text-brand-600" />
+                        <span>{t('aiCompanion.listenAgain')}</span>
+                      </>
+                    )}
+                  </button>
+                )}
 
                 {/* Recommendation Cards */}
                 {msg.recommendations && msg.recommendations.length > 0 && (
@@ -189,7 +275,19 @@ export function AiCompanion() {
               className="flex w-full h-16 rounded-2xl border-2 border-gray-300 bg-gray-50 px-5 text-xl transition-colors placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
             />
           </div>
-          <Button type="submit" size="lg" className="h-16 w-16 px-0 shrink-0 rounded-2xl flex items-center justify-center shadow-md" disabled={!input.trim()}>
+          {/* Microphone Voice Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => setShowVoiceModal(true)}
+            className="h-16 w-16 px-0 shrink-0 rounded-2xl flex items-center justify-center shadow-md border-2 border-brand-500 text-brand-700 bg-brand-50 hover:bg-brand-100 cursor-pointer"
+            title={t('aiCompanion.talkToSaathi')}
+            aria-label={t('aiCompanion.talkToSaathi')}
+          >
+            <Mic className="w-8 h-8" />
+          </Button>
+          <Button type="submit" size="lg" className="h-16 w-16 px-0 shrink-0 rounded-2xl flex items-center justify-center shadow-md cursor-pointer" disabled={!input.trim()}>
             <Send className="w-8 h-8" />
           </Button>
         </form>

@@ -415,7 +415,21 @@
     "initialLonely": "I'm feeling lonely.",
     "initialResponse": "I'm here with you. I found some people and activities nearby that match your interests.",
     "errorResponse": "I'm having a little trouble connecting right now, but I'm still here for you. Please try again in a moment.",
-    "saathiTyping": "Saathi..."
+    "saathiTyping": "Saathi...",
+    "talkToSaathi": "Talk to Saathi",
+    "tapToSpeak": "Tap the microphone and start speaking.",
+    "listening": "Listening...",
+    "thinking": "Saathi is thinking...",
+    "speaking": "Saathi is speaking...",
+    "stopSpeaking": "Stop",
+    "listenAgain": "Listen",
+    "youSaid": "You said",
+    "saathiSaid": "Saathi",
+    "unsupported": "Voice input isn't supported on this device. You can use text input instead.",
+    "micDenied": "Microphone access was denied. Please allow microphone permissions in your browser settings to talk to Saathi.",
+    "couldNotHear": "Sorry, I couldn't hear you. Please try again.",
+    "tryAgain": "Try Again",
+    "close": "Close"
   },
   "layout": {
     "notifications": "Notifications",
