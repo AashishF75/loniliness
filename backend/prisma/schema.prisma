@@ -103,6 +103,10 @@ model User {
   familyAsParent   FamilyRelationship[] @relation("ParentRelationships")
   familyAsMember   FamilyRelationship[] @relation("FamilyMemberRelationships")
 
+  // Saathi Circle
+  circleMemberships CircleMember[] @relation("SeniorCircle")
+  inCircles         CircleMember[] @relation("CircleMembers")
+
   @@index([createdAt])
 }
 
@@ -354,4 +358,23 @@ model SeniorVerificationRequest {
   updatedAt             DateTime           @updatedAt
 
   @@index([status, createdAt])
+}
+
+model CircleMember {
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  seniorId         String      @db.ObjectId
+  senior           User        @relation("SeniorCircle", fields: [seniorId], references: [id], onDelete: Cascade)
+  memberId         String      @db.ObjectId
+  member           User        @relation("CircleMembers", fields: [memberId], references: [id], onDelete: Cascade)
+  relationshipType String      // DAUGHTER, SON, SPOUSE, FRIEND, NEIGHBOR, CAREGIVER, OTHER
+  allowChat        Boolean     @default(true)
+  allowEvents      Boolean     @default(false)
+  allowLocation    Boolean     @default(false)
+  allowEmergency   Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@unique([seniorId, memberId])
+  @@index([seniorId])
+  @@index([memberId])
 }

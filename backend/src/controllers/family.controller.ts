@@ -26,6 +26,17 @@ export const canViewParentActivities = async (parentId: string, memberId: string
  */
 export const canViewParentLocation = async (parentId: string, memberId: string): Promise<boolean> => {
   try {
+    // If the Senior has configured Saathi Circle permissions for this member, enforce it strictly
+    const circleEntry = await prisma.circleMember.findUnique({
+      where: {
+        seniorId_memberId: { seniorId: parentId, memberId }
+      }
+    });
+
+    if (circleEntry && !circleEntry.allowLocation) {
+      return false; // Circle permission OFF strictly revokes location access
+    }
+
     const rel = await prisma.familyRelationship.findUnique({
       where: {
         parentId_memberId: { parentId, memberId }

@@ -19,6 +19,7 @@ import eventRoutes from './routes/event.routes';
 import adminRoutes from './routes/admin.routes';
 import familyRoutes from './routes/family.routes';
 import verificationRoutes from './routes/verification.routes';
+import circleRoutes from './routes/circle.routes';
 import { globalLimiter } from './middleware/rateLimiter';
 
 // Apply global rate limiting to all API routes
@@ -36,6 +37,8 @@ app.use('/api/events', eventRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/family', familyRoutes);
 app.use('/api/verification', verificationRoutes);
+app.use('/api/circle', circleRoutes);
+app.use('/api/saathi-circle', circleRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Saathi API is running perfectly.' });

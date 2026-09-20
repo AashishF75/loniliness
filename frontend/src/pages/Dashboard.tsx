@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, MapPin, Calendar, Users, MessageCircle, Heart, Sparkles, Activity, Mic } from 'lucide-react';
+import { User, MapPin, Calendar, Users, MessageCircle, Heart, Sparkles, Activity, Mic, Shield } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { userService } from '../services/userService';
@@ -145,6 +145,34 @@ export function Dashboard() {
             </div>
             <div className="hidden sm:flex w-20 h-20 bg-white/20 rounded-3xl items-center justify-center shrink-0 shadow-inner">
               <MessageCircle className="w-10 h-10 text-white" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Saathi Circle */}
+        <Card
+          className="col-span-1 sm:col-span-2 bg-gradient-to-r from-emerald-700 to-teal-800 text-white border-none cursor-pointer hover:shadow-lg transition-all p-8"
+          onClick={() => navigate('/circle')}
+        >
+          <div className="flex items-center justify-between">
+            <div className="pr-2 sm:pr-4">
+              <span className="bg-white/20 text-white font-extrabold text-sm px-3.5 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">
+                {t('circle.title')}
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold mb-2 flex items-center gap-2 sm:gap-3">
+                <Shield className="w-7 h-7 text-emerald-200" />
+                {t('circle.title')}
+              </h2>
+              <p className="text-emerald-100 text-lg sm:text-xl leading-relaxed">{t('circle.subtitle')}</p>
+              <div className="mt-4">
+                <span className="inline-flex items-center gap-2 bg-white text-emerald-900 font-extrabold text-lg px-5 py-2.5 rounded-2xl shadow-sm">
+                  <Users className="w-5 h-5 text-emerald-700" />
+                  {t('circle.managePermissions')}
+                </span>
+              </div>
+            </div>
+            <div className="hidden sm:flex w-20 h-20 bg-white/20 rounded-3xl items-center justify-center shrink-0 shadow-inner">
+              <Users className="w-10 h-10 text-white" />
             </div>
           </div>
         </Card>

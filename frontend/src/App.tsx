@@ -19,6 +19,7 @@ import { PublicProfile } from './pages/PublicProfile';
 import { Events } from './pages/Events';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { Verification } from './pages/Verification';
+import { SaathiCircle } from './pages/SaathiCircle';
 
 import { AdminLayout } from './components/layout/AdminLayout';
 
@@ -49,6 +50,8 @@ function App() {
             <Route path="/ai-companion" element={<AiCompanion />} />
             <Route path="/connections" element={<Connections />} />
             <Route path="/family" element={<Family />} />
+            <Route path="/circle" element={<SaathiCircle />} />
+            <Route path="/saathi-circle" element={<SaathiCircle />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/verify" element={<Verification />} />
             <Route path="/users/:id" element={<PublicProfile />} />

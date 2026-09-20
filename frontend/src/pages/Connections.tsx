@@ -353,7 +353,11 @@ export function Connections() {
                   <Button variant="outline" size="lg" className="flex-1 h-12 text-base sm:text-lg" onClick={() => window.location.href=`/users/${conn.userId}`}>{t('connections.viewProfile')}</Button>
                   <Button size="lg" className="flex-1 h-12 shadow-md text-base sm:text-lg" onClick={() => setActiveChatId(conn.id)}><MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" /> {t('connections.chat')}</Button>
                 </div>
-                <div className="flex gap-3 text-sm mt-1 justify-center md:justify-end">
+                <div className="flex gap-3 text-sm mt-1 justify-center md:justify-end items-center flex-wrap">
+                  <button onClick={() => window.location.href='/circle'} className="text-brand-700 hover:text-brand-900 font-extrabold flex items-center gap-1 bg-brand-50 px-2 py-0.5 rounded-lg border border-brand-200">
+                    👥 {t('circle.title')}
+                  </button>
+                  <span className="text-gray-300">|</span>
                   <button onClick={() => handleRemoveConnection(conn.id, conn.name)} className="text-gray-500 hover:text-gray-800 underline">{t('connections.remove')}</button>
                   <span className="text-gray-300">|</span>
                   <button onClick={() => handleReportUser(conn.userId)} className="text-gray-500 hover:text-gray-800 underline">{t('connections.report')}</button>
