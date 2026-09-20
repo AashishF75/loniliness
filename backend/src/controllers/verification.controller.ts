@@ -116,7 +116,7 @@ export const submitVerification = async (req: Request | any, res: Response): Pro
       return;
     }
 
-    // Duplicate submission guards
+    // Duplicate submission guards: If already verified or currently pending, reject
     if (user.verificationStatus === 'VERIFIED' || user.verified) {
       cleanupFiles();
       res.status(400).json({
@@ -126,11 +126,11 @@ export const submitVerification = async (req: Request | any, res: Response): Pro
       return;
     }
 
-    if (user.verificationStatus === 'PENDING' || user.verificationStatus === 'NEEDS_REVIEW') {
+    if (user.verificationStatus === 'PENDING') {
       cleanupFiles();
       res.status(400).json({
         success: false,
-        message: 'You already have a verification request under review. Please wait for administrator review.'
+        message: 'You already have a verification request under review.'
       });
       return;
     }
@@ -163,40 +163,56 @@ export const submitVerification = async (req: Request | any, res: Response): Pro
       return;
     }
 
-    // Resolve declared Date of Birth
+    // Authoritative registered DOB: User's registered DOB is strictly immutable.
+    // Rule M: User cannot modify registered DOB after registration.
+    const registeredDob = user.dob ? new Date(user.dob) : null;
     const declaredDobInput = req.body.declaredDob;
-    let declaredDob: Date | null = null;
 
     if (declaredDobInput) {
-      const dobVal = parseAndValidateDob(declaredDobInput);
-      if (!dobVal.valid || !dobVal.dob) {
+      const parsedInput = parseAndValidateDob(declaredDobInput);
+      if (!parsedInput.valid || !parsedInput.dob) {
         cleanupFiles();
         res.status(400).json({
           success: false,
-          message: dobVal.error || 'A valid Date of Birth (DOB) is required for verification.'
+          message: parsedInput.error || 'A valid Date of Birth (DOB) is required for verification.'
         });
         return;
       }
-      declaredDob = dobVal.dob;
-    } else if (user.dob) {
-      declaredDob = new Date(user.dob);
-    } else if (user.age) {
-      const estYear = new Date().getFullYear() - user.age;
-      declaredDob = new Date(Date.UTC(estYear, 0, 1));
+
+      if (registeredDob) {
+        // Enforce immutability of registered DOB
+        const regYear = registeredDob.getUTCFullYear();
+        const regMonth = registeredDob.getUTCMonth();
+        const regDay = registeredDob.getUTCDate();
+        const inYear = parsedInput.dob.getUTCFullYear();
+        const inMonth = parsedInput.dob.getUTCMonth();
+        const inDay = parsedInput.dob.getUTCDate();
+
+        if (regYear !== inYear || regMonth !== inMonth || regDay !== inDay) {
+          cleanupFiles();
+          res.status(400).json({
+            success: false,
+            message: 'Date of Birth cannot be modified after registration. Document must match your registered Date of Birth.'
+          });
+          return;
+        }
+      }
     }
 
-    if (!declaredDob || isNaN(declaredDob.getTime())) {
+    const authoritativeDob = registeredDob || (declaredDobInput ? parseAndValidateDob(declaredDobInput).dob : null) || (user.age ? new Date(Date.UTC(new Date().getFullYear() - user.age, 0, 1)) : null);
+
+    if (!authoritativeDob || isNaN(authoritativeDob.getTime())) {
       cleanupFiles();
       res.status(400).json({
         success: false,
-        message: 'A valid Date of Birth (DOB) is required for verification.'
+        message: 'A valid registered Date of Birth (DOB) is required for verification.'
       });
       return;
     }
 
-    // Verify declared age is >= 50 using birthday-aware calculation
-    const declaredAge = calculateAgeFromDob(declaredDob);
-    if (declaredAge < 50) {
+    // Verify age is >= 50 using server-side birthday-aware calculation
+    const serverCalculatedAge = calculateAgeFromDob(authoritativeDob);
+    if (serverCalculatedAge < 50) {
       cleanupFiles();
       res.status(400).json({
         success: false,
@@ -210,7 +226,7 @@ export const submitVerification = async (req: Request | any, res: Response): Pro
     const rawDocType = typeof req.body.documentType === 'string' ? req.body.documentType.trim().toUpperCase() : 'AADHAAR';
     const documentType = ALLOWED_DOC_TYPES.includes(rawDocType) ? rawDocType : 'AADHAAR';
 
-    // Delete any old rejected document files for this user to avoid disk accumulation
+    // Delete any old rejected/unverified document files for this user to avoid disk accumulation
     const existingReq = await prisma.seniorVerificationRequest.findUnique({
       where: { userId }
     });
@@ -225,7 +241,7 @@ export const submitVerification = async (req: Request | any, res: Response): Pro
       ocrResult = await processDocumentOcr(
         documentFile.path,
         user.name,
-        declaredDob
+        authoritativeDob
       );
     } catch (ocrErr: any) {
       console.error('OCR analysis failed safely:', ocrErr);
@@ -236,75 +252,168 @@ export const submitVerification = async (req: Request | any, res: Response): Pro
         extractedAge: null,
         nameMatchScore: 0,
         dobMatched: false,
-        notes: ['OCR analysis could not extract legible text. Document queued for manual admin review.']
+        notes: ['OCR analysis could not extract legible text.']
       };
     }
 
-    // Persist SeniorVerificationRequest - server authoritative, client cannot tamper
-    const verificationRequest = await prisma.seniorVerificationRequest.upsert({
-      where: { userId },
-      update: {
-        status: 'NEEDS_REVIEW',
-        declaredName: user.name,
-        declaredDob,
-        extractedName: ocrResult.extractedName,
-        extractedDob: ocrResult.extractedDob,
-        extractedAge: ocrResult.extractedAge,
-        ocrConfidence: ocrResult.confidence,
-        nameMatchScore: ocrResult.nameMatchScore,
-        dobMatched: ocrResult.dobMatched,
-        documentType,
-        documentFilename: documentFile.filename,
-        selfieFilename: selfieFile ? selfieFile.filename : null,
-        reviewNotes: ocrResult.notes.join('\n'),
-        rejectionReason: null,
-        reviewedById: null,
-        reviewedAt: null,
-        updatedAt: new Date()
-      },
-      create: {
-        userId,
-        status: 'NEEDS_REVIEW',
-        declaredName: user.name,
-        declaredDob,
-        extractedName: ocrResult.extractedName,
-        extractedDob: ocrResult.extractedDob,
-        extractedAge: ocrResult.extractedAge,
-        ocrConfidence: ocrResult.confidence,
-        nameMatchScore: ocrResult.nameMatchScore,
-        dobMatched: ocrResult.dobMatched,
-        documentType,
-        documentFilename: documentFile.filename,
-        selfieFilename: selfieFile ? selfieFile.filename : null,
-        reviewNotes: ocrResult.notes.join('\n')
-      }
-    });
+    // Validate extracted DOB
+    const extDob = ocrResult.extractedDob;
+    const isExtDobValid =
+      extDob !== null &&
+      !isNaN(extDob.getTime()) &&
+      extDob.getUTCFullYear() >= 1900 &&
+      extDob.getUTCFullYear() <= new Date().getFullYear();
 
-    // Update User record - verificationStatus strictly NEEDS_REVIEW, verified stays false
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        dob: declaredDob,
-        age: declaredAge,
+    // Verify extracted age from document is >= 50
+    const isExtAgeValid = ocrResult.extractedAge !== null && ocrResult.extractedAge >= 50;
+
+    // Strict automatic verification criteria:
+    // 1. User is SENIOR role
+    // 2. User is not already verified
+    // 3. Server-calculated age >= 50
+    // 4. OCR extracted a valid DOB
+    // 5. Extracted DOB matches immutable registered DOB (exact or birth year match)
+    // 6. Extracted document age >= 50
+    // 7. OCR extracted a non-empty name candidate
+    // 8. Name match score >= 70
+    // 9. OCR confidence >= 40
+    const isAutoVerified = Boolean(
+      user.role === 'SENIOR' &&
+      !user.verified &&
+      serverCalculatedAge >= 50 &&
+      isExtDobValid &&
+      ocrResult.dobMatched === true &&
+      isExtAgeValid &&
+      ocrResult.extractedName &&
+      ocrResult.extractedName.trim().length > 0 &&
+      ocrResult.nameMatchScore >= 70 &&
+      ocrResult.confidence >= 40
+    );
+
+    const now = new Date();
+    const finalStatus = isAutoVerified ? 'VERIFIED' : 'NEEDS_REVIEW';
+    const finalReviewNotes = isAutoVerified
+      ? `${ocrResult.notes.join('\n')}\nAutomatic Verification: Identity, DOB, age, and name matching criteria satisfied.`
+      : `${ocrResult.notes.join('\n')}\nAutomatic Verification: Identity attributes could not be automatically confirmed.`;
+
+    // Concurrency-safe atomic update with retry on write conflicts
+    let attempts = 0;
+    while (attempts < 3) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          // Re-fetch current user inside transaction to guard against simultaneous submissions
+          const currentUser = await tx.user.findUnique({ where: { id: userId } });
+          if (!currentUser || currentUser.verified || currentUser.verificationStatus === 'VERIFIED') {
+            return; // Already verified by concurrent process
+          }
+
+          await tx.seniorVerificationRequest.upsert({
+            where: { userId },
+            update: {
+              status: finalStatus,
+              declaredName: user.name,
+              declaredDob: authoritativeDob,
+              extractedName: ocrResult.extractedName,
+              extractedDob: ocrResult.extractedDob,
+              extractedAge: ocrResult.extractedAge,
+              ocrConfidence: ocrResult.confidence,
+              nameMatchScore: ocrResult.nameMatchScore,
+              dobMatched: ocrResult.dobMatched,
+              documentType,
+              documentFilename: isAutoVerified ? null : documentFile.filename,
+              selfieFilename: isAutoVerified ? null : (selfieFile ? selfieFile.filename : null),
+              reviewNotes: finalReviewNotes,
+              rejectionReason: null,
+              reviewedById: null,
+              reviewedAt: isAutoVerified ? now : null,
+              updatedAt: now
+            },
+            create: {
+              userId,
+              status: finalStatus,
+              declaredName: user.name,
+              declaredDob: authoritativeDob,
+              extractedName: ocrResult.extractedName,
+              extractedDob: ocrResult.extractedDob,
+              extractedAge: ocrResult.extractedAge,
+              ocrConfidence: ocrResult.confidence,
+              nameMatchScore: ocrResult.nameMatchScore,
+              dobMatched: ocrResult.dobMatched,
+              documentType,
+              documentFilename: isAutoVerified ? null : documentFile.filename,
+              selfieFilename: isAutoVerified ? null : (selfieFile ? selfieFile.filename : null),
+              reviewNotes: finalReviewNotes,
+              reviewedById: null,
+              reviewedAt: isAutoVerified ? now : null
+            }
+          });
+
+          await tx.user.update({
+            where: { id: userId },
+            data: {
+              age: serverCalculatedAge,
+              verified: isAutoVerified,
+              verificationStatus: finalStatus,
+              verifiedAt: isAutoVerified ? now : null,
+              verificationSubmittedAt: now,
+              verificationMethod: isAutoVerified ? 'AUTOMATIC_OCR' : 'DOCUMENT_OCR',
+              verificationReviewedById: null,
+              verificationFailureReason: null
+            }
+          });
+
+          if (isAutoVerified) {
+            await tx.notification.create({
+              data: {
+                userId,
+                type: 'VERIFICATION_APPROVED',
+                title: 'Senior Verification Approved',
+                message: 'Congratulations! Your Senior Citizen status has been automatically verified. Your verified badge is now active on your profile and connections.'
+              }
+            });
+          }
+        });
+        break;
+      } catch (txErr: any) {
+        if (txErr?.code === 'P2034' && attempts < 2) {
+          attempts++;
+          await new Promise((resolve) => setTimeout(resolve, 50 * attempts));
+          continue;
+        }
+        throw txErr;
+      }
+    }
+
+    if (isAutoVerified) {
+      // Ephemeral purge of uploaded ID files to uphold privacy
+      cleanupFiles();
+
+      res.json({
+        success: true,
+        message: 'Verification successful! Your account has been automatically verified.',
+        status: 'VERIFIED',
+        verified: true,
+        matchSummary: {
+          dobMatched: ocrResult.dobMatched,
+          nameMatchScore: ocrResult.nameMatchScore,
+          extractedAge: ocrResult.extractedAge,
+          confidence: ocrResult.confidence
+        }
+      });
+    } else {
+      res.json({
+        success: true,
+        message: 'We could not automatically verify your document. Please submit a valid document matching your registered details.',
+        status: 'NEEDS_REVIEW',
         verified: false,
-        verificationStatus: 'NEEDS_REVIEW',
-        verificationSubmittedAt: new Date(),
-        verificationMethod: 'DOCUMENT_OCR',
-        verificationFailureReason: null
-      }
-    });
-
-    res.json({
-      success: true,
-      message: 'Verification submitted successfully. Our safety team will review your request.',
-      status: 'NEEDS_REVIEW',
-      matchSummary: {
-        dobMatched: ocrResult.dobMatched,
-        nameMatchScore: ocrResult.nameMatchScore,
-        extractedAge: ocrResult.extractedAge,
-        confidence: ocrResult.confidence
-      }
-    });
+        matchSummary: {
+          dobMatched: ocrResult.dobMatched,
+          nameMatchScore: ocrResult.nameMatchScore,
+          extractedAge: ocrResult.extractedAge,
+          confidence: ocrResult.confidence
+        }
+      });
+    }
   } catch (error: any) {
     cleanupFiles();
     console.error('Verification submission error:', error);

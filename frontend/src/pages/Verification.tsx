@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Shield,
   ShieldCheck,
@@ -22,6 +23,7 @@ import { VerifiedBadge } from '../components/ui/VerifiedBadge';
 import { verificationService, type VerificationStatusResponse } from '../services/verificationService';
 
 export function Verification() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -171,7 +173,11 @@ export function Verification() {
       }
 
       const res = await verificationService.submitVerification(formData);
-      setSuccessMsg(res.message || 'Verification submitted for review!');
+      if (res.status === 'VERIFIED' || res.verified) {
+        setSuccessMsg(t('verification.autoVerifiedSuccess'));
+      } else {
+        setErrorMsg(t('verification.autoVerifyFailed'));
+      }
       await loadStatus();
     } catch (err: any) {
       setErrorMsg(err.message || 'Submission failed. Please try again.');
@@ -202,9 +208,9 @@ export function Verification() {
           </div>
 
           <div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2">You are a Verified Senior</h1>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2">{t('verification.verifiedTitle')}</h1>
             <p className="text-lg sm:text-xl text-gray-600 font-medium max-w-md mx-auto">
-              Your age and identity have been officially verified. Your trust badge is visible to all members.
+              {t('verification.verifiedSeniorDesc')}
             </p>
           </div>
 
@@ -214,16 +220,16 @@ export function Verification() {
 
           {statusData.verifiedAt && (
             <p className="text-sm text-gray-500 font-medium">
-              Verified on {new Date(statusData.verifiedAt).toLocaleDateString()}
+              {t('verification.verifiedOn')} {new Date(statusData.verifiedAt).toLocaleDateString()}
             </p>
           )}
 
           <div className="flex gap-4 mt-4 w-full sm:w-auto">
             <Button onClick={() => navigate('/people')} className="w-full sm:w-auto px-8 h-14 text-lg font-bold">
-              Find Companions Nearby
+              {t('verification.findCompanions')}
             </Button>
             <Button variant="outline" onClick={() => navigate('/dashboard')} className="w-full sm:w-auto px-8 h-14 text-lg font-bold">
-              Go to Dashboard
+              {t('verification.dashboard')}
             </Button>
           </div>
         </Card>
@@ -231,56 +237,7 @@ export function Verification() {
     );
   }
 
-  // Under Review State
-  if (statusData?.verificationStatus === 'NEEDS_REVIEW' || statusData?.verificationStatus === 'PENDING') {
-    return (
-      <div className="max-w-2xl mx-auto py-8 px-4 flex flex-col gap-6">
-        <button onClick={() => navigate(-1)} className="flex items-center text-gray-600 hover:text-gray-900 font-medium">
-          <ArrowLeft className="w-5 h-5 mr-1" /> Back
-        </button>
-
-        <Card className="p-8 sm:p-12 text-center flex flex-col items-center gap-6 border-2 border-blue-200 bg-blue-50/40">
-          <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center border-4 border-blue-300 animate-pulse">
-            <Clock className="w-10 h-10 text-blue-600" />
-          </div>
-
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2">Verification Under Review</h1>
-            <p className="text-lg sm:text-xl text-gray-600 font-medium max-w-md mx-auto">
-              Thank you for submitting your identity document. Our safety moderation team is carefully reviewing your details.
-            </p>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-blue-200 text-left w-full max-w-md">
-            <div className="flex justify-between py-2 border-b border-gray-100 text-sm">
-              <span className="text-gray-500 font-medium">Submitted At</span>
-              <span className="font-bold text-gray-800">
-                {statusData.verificationSubmittedAt ? new Date(statusData.verificationSubmittedAt).toLocaleString() : 'Recently'}
-              </span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-gray-100 text-sm">
-              <span className="text-gray-500 font-medium">Declared Birth Date</span>
-              <span className="font-bold text-gray-800">{declaredDob || 'On file'}</span>
-            </div>
-            <div className="flex justify-between py-2 text-sm">
-              <span className="text-gray-500 font-medium">Status</span>
-              <span className="font-bold text-blue-600">Pending Safety Approval</span>
-            </div>
-          </div>
-
-          <p className="text-sm text-gray-500 max-w-md">
-            You will receive a notification as soon as your account is approved. In the meantime, you can explore events and chat with your AI companion!
-          </p>
-
-          <Button onClick={() => navigate('/dashboard')} className="w-full sm:w-auto px-8 h-14 text-lg font-bold">
-            Back to Dashboard
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
-  // Submission Form (for UNVERIFIED or REJECTED)
+  // Submission Form (for UNVERIFIED, NEEDS_REVIEW, PENDING, or REJECTED)
   return (
     <div className="max-w-2xl mx-auto py-8 px-4 flex flex-col gap-8">
       <button onClick={() => navigate(-1)} className="flex items-center text-gray-600 hover:text-gray-900 font-medium">
@@ -290,23 +247,34 @@ export function Verification() {
       <div>
         <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-800 font-bold px-3 py-1 rounded-xl text-sm mb-3">
           <Shield className="w-4 h-4 text-brand-600" />
-          Safety First
+          {t('verification.safetyFirst')}
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-3">
-          Senior Citizen Verification
+          {t('verification.title')}
         </h1>
         <p className="text-lg sm:text-xl text-gray-600 font-medium">
-          Verify your age (50+) with an official identity document to unlock connection requests and receive your Verified Senior badge.
+          {t('verification.subtitle')}
         </p>
       </div>
 
+      {(statusData?.verificationStatus === 'NEEDS_REVIEW' || statusData?.verificationStatus === 'PENDING') && (
+        <div className="bg-amber-50 border-2 border-amber-200 p-5 rounded-2xl flex items-start gap-4">
+          <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-lg font-bold text-amber-900 mb-1">{t('verification.needsReview')}</h4>
+            <p className="text-amber-800 font-medium text-base">
+              {t('verification.autoVerifyFailed')}
+            </p>
+          </div>
+        </div>
+      )}
       {statusData?.verificationStatus === 'REJECTED' && (
         <div className="bg-red-50 border-2 border-red-200 p-5 rounded-2xl flex items-start gap-4">
           <AlertCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
           <div>
-            <h4 className="text-lg font-bold text-red-900 mb-1">Previous Submission Feedback</h4>
+            <h4 className="text-lg font-bold text-red-900 mb-1">{t('verification.rejected')}</h4>
             <p className="text-red-700 font-medium text-base">
-              {statusData.verificationFailureReason || 'The submitted document was unreadable or the details did not match your declared date of birth. Please submit a clearer, well-lit photo.'}
+              {statusData.verificationFailureReason || t('verification.autoVerifyFailed')}
             </p>
           </div>
         </div>
@@ -332,16 +300,17 @@ export function Verification() {
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <span className="w-7 h-7 rounded-full bg-brand-600 text-white font-bold text-sm flex items-center justify-center">1</span>
-              <label className="text-xl font-bold text-gray-800">Your Date of Birth</label>
+              <label className="text-xl font-bold text-gray-800">{t('verification.registeredDob')}</label>
             </div>
-            <p className="text-sm text-gray-500 ml-9">Must match the date printed on your identity document.</p>
+            <p className="text-sm text-gray-500 ml-9">{t('verification.immutableDobNote')}</p>
             <div className="relative ml-9">
               <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
               <Input
                 type="date"
                 value={declaredDob}
-                onChange={(e) => setDeclaredDob(e.target.value)}
-                className="pl-14 h-14 text-lg rounded-2xl bg-gray-50 border-2 border-gray-200"
+                readOnly={Boolean(statusData?.dob)}
+                onChange={(e) => !statusData?.dob && setDeclaredDob(e.target.value)}
+                className={`pl-14 h-14 text-lg rounded-2xl ${statusData?.dob ? 'bg-gray-100 cursor-not-allowed text-gray-700' : 'bg-gray-50'} border-2 border-gray-200`}
                 required
               />
             </div>
@@ -491,11 +460,11 @@ export function Verification() {
             {submitting ? (
               <span className="flex items-center justify-center gap-3">
                 <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                Analyzing Document & Submitting...
+                {t('verification.autoVerifying')}
               </span>
             ) : (
               <span className="flex items-center justify-center gap-2">
-                <ShieldCheck className="w-6 h-6" /> Submit for Verification
+                <ShieldCheck className="w-6 h-6" /> {t('verification.submitVerification')}
               </span>
             )}
           </Button>
